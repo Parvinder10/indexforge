@@ -1,6 +1,6 @@
 import { SearchResponse, IndexStats, DocumentItem } from './types';
 
-const API_BASE = '/api';
+const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL || '/api';
 
 export async function search(params: {
   q: string;
@@ -88,5 +88,15 @@ export async function saveIndex() {
 
 export async function loadIndex() {
   const res = await fetch(`${API_BASE}/index/load`, { method: 'POST' });
+  return res.json();
+}
+
+export async function runLiveBenchmark(corpusSize: number) {
+  const res = await fetch(`${API_BASE}/benchmark`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ corpus_size: corpusSize }),
+  });
+  if (!res.ok) throw new Error(`Benchmark failed: ${res.statusText}`);
   return res.json();
 }

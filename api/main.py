@@ -6,6 +6,7 @@ from typing import Optional, List, Dict, Any
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from .indexforge_binding import IndexForgeBinding
@@ -18,14 +19,27 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Enable CORS for React frontend
+# Enable CORS for React frontend (Vite dev server and production)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
+    ],
+    allow_origin_regex=r"^https?://(localhost|127\.0\.0\.1)(:\d+)?$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Mount compiled frontend assets if available
+frontend_dist = Path(__file__).resolve().parent.parent / "frontend" / "dist"
+if (frontend_dist / "assets").exists():
+    app.mount("/assets", StaticFiles(directory=str(frontend_dist / "assets")), name="assets")
 
 # Global engine and DB instances
 ENGINE: Optional[IndexForgeBinding] = None
@@ -34,6 +48,10 @@ PIPELINE: Optional[DocumentIngestionPipeline] = None
 
 @app.get("/", response_class=HTMLResponse)
 def serve_frontend():
+    dist_index = frontend_dist / "index.html"
+    if dist_index.exists():
+        with open(dist_index, "r", encoding="utf-8") as f:
+            return f.read()
     html_file = Path(__file__).resolve().parent / "static" / "index.html"
     if html_file.exists():
         with open(html_file, "r", encoding="utf-8") as f:

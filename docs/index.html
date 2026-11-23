@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>IndexForge — Live Search Engine & Dashboard</title>
+  <title>IndexForge — Live Search Engine Demo</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2'><polygon points='12 2 2 7 12 12 22 7 12 2'/><polyline points='2 17 12 22 22 17'/><polyline points='2 12 12 17 22 12'/></svg>" />
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -23,10 +23,10 @@
   <div id="root"></div>
 
   <script type="text/babel">
-    const { useState, useEffect, useMemo, useCallback } = React;
+    const { useState, useEffect, useMemo } = React;
 
     // Built-in sample documents from real-world collection
-    const INITIAL_DOCUMENTS = [
+    const SAMPLE_DOCUMENTS = [
       {
         id: 1,
         title: "Federal Procurement Regulation Notice",
@@ -157,9 +157,6 @@
     };
 
     function App() {
-      const [docsList, setDocsList] = useState(INITIAL_DOCUMENTS);
-      const [activeTab, setActiveTab] = useState('search'); // 'search' | 'dashboard' | 'corpus'
-
       const [query, setQuery] = useState('public tender');
       const [algorithm, setAlgorithm] = useState('bm25');
       const [k1, setK1] = useState(1.2);
@@ -171,17 +168,10 @@
       const [selectedDoc, setSelectedDoc] = useState(null);
       const [showStatsModal, setShowStatsModal] = useState(false);
       const [showBenchmarkModal, setShowBenchmarkModal] = useState(false);
-      const [showIngestModal, setShowIngestModal] = useState(false);
       const [showTuning, setShowTuning] = useState(false);
       const [showSyntax, setShowSyntax] = useState(false);
 
-      // Ingestion form state
-      const [newTitle, setNewTitle] = useState('');
-      const [newSource, setNewSource] = useState('');
-      const [newDocType, setNewDocType] = useState('tender');
-      const [newContent, setNewContent] = useState('');
-
-      const invertedData = useMemo(() => buildInvertedIndex(docsList), [docsList]);
+      const invertedData = useMemo(() => buildInvertedIndex(SAMPLE_DOCUMENTS), []);
 
       const runSearch = useCallback(() => {
         const t0 = performance.now();
@@ -201,7 +191,7 @@
 
         if (filteredTerms.length === 0) {
           setHits([]);
-          setLatencyMs(performance.now() - t0);
+          setLatencyMs((performance.now() - t0));
           return;
         }
 
@@ -210,7 +200,7 @@
 
         if (isPhrase) {
           // Exact phrase matching using position index
-          docsList.forEach(doc => {
+          SAMPLE_DOCUMENTS.forEach(doc => {
             const hasAll = filteredTerms.every(t => invertedData.index[t]?.some(p => p.doc_id === doc.id));
             if (hasAll) {
               const termPositions = filteredTerms.map(t => invertedData.index[t].find(p => p.doc_id === doc.id).positions);
@@ -226,7 +216,7 @@
 
               if (phraseCount > 0) {
                 const dl = invertedData.docLengths[doc.id] || 1;
-                const idf = Math.log(1 + (docsList.length + 0.5) / 1.5);
+                const idf = Math.log(1 + (SAMPLE_DOCUMENTS.length + 0.5) / 1.5);
                 const score = idf * (phraseCount * (k1 + 1)) / (phraseCount + k1 * (1 - b + b * (dl / invertedData.avgdl)));
                 candidateScores[doc.id] = score * 1.5; // Phrase boost
                 matchedTermsMap[doc.id] = [cleanQ];
@@ -240,8 +230,8 @@
             const df = postings.length;
             if (df === 0) return;
 
-            const idfBM25 = Math.log(1 + (docsList.length - df + 0.5) / (df + 0.5));
-            const idfTFIDF = 1 + Math.log((docsList.length + 1) / (df + 1));
+            const idfBM25 = Math.log(1 + (SAMPLE_DOCUMENTS.length - df + 0.5) / (df + 0.5));
+            const idfTFIDF = 1 + Math.log((SAMPLE_DOCUMENTS.length + 1) / (df + 1));
 
             postings.forEach(p => {
               const dl = invertedData.docLengths[p.doc_id] || 1;
@@ -262,7 +252,7 @@
         // Format search hits
         let rankedHits = Object.entries(candidateScores).map(([docIdStr, score]) => {
           const docId = parseInt(docIdStr, 10);
-          const doc = docsList.find(d => d.id === docId);
+          const doc = SAMPLE_DOCUMENTS.find(d => d.id === docId);
           const terms = Array.from(matchedTermsMap[docId] || []);
 
           // Highlight snippet
@@ -298,600 +288,287 @@
 
         setHits(rankedHits);
         setLatencyMs(performance.now() - t0);
-      }, [query, algorithm, k1, b, selectedType, invertedData, docsList]);
+      }, [query, algorithm, k1, b, selectedType, invertedData]);
 
       useEffect(() => {
         runSearch();
       }, [runSearch]);
-
-      const handleAddDocument = (e) => {
-        e.preventDefault();
-        if (!newTitle.trim() || !newContent.trim()) return;
-
-        const newDoc = {
-          id: docsList.length + 1,
-          title: newTitle.trim(),
-          source: newSource.trim() || "User Upload",
-          date: new Date().toISOString().split('T')[0],
-          doc_type: newDocType,
-          content: newContent.trim()
-        };
-
-        setDocsList([newDoc, ...docsList]);
-        setNewTitle('');
-        setNewSource('');
-        setNewContent('');
-        setShowIngestModal(false);
-      };
 
       const maxScore = Math.max(...hits.map(h => h.score), 1.0);
 
       return (
         <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100 font-sans">
           {/* Header */}
-          <header className="sticky top-0 z-40 bg-slate-950/85 backdrop-blur-md border-b border-slate-800 px-4 sm:px-8 py-3.5">
-            <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-3 w-full md:w-auto justify-between md:justify-start">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-400 flex items-center justify-center font-bold text-white text-lg shadow-lg shadow-blue-500/20">
-                    ⚡
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h1 className="font-extrabold text-lg text-white">IndexForge</h1>
-                      <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
-                        Live Dashboard
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-400">
-                      Inverted Index • Okapi BM25 & TF-IDF • Position Verification
-                    </p>
-                  </div>
+          <header className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-md border-b border-slate-800 px-4 sm:px-8 py-3.5">
+            <div className="max-w-7xl mx-auto flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-400 flex items-center justify-center font-bold text-white text-lg shadow-lg shadow-blue-500/20">
+                  ⚡
                 </div>
-
-                {/* Mobile Tab Pills */}
-                <div className="flex md:hidden items-center bg-slate-900 border border-slate-800 rounded-lg p-0.5 text-xs">
-                  <button onClick={() => setActiveTab('search')} className={`px-2.5 py-1 rounded ${activeTab === 'search' ? 'bg-blue-600 text-white' : 'text-slate-400'}`}>Search</button>
-                  <button onClick={() => setActiveTab('dashboard')} className={`px-2.5 py-1 rounded ${activeTab === 'dashboard' ? 'bg-blue-600 text-white' : 'text-slate-400'}`}>Metrics</button>
-                  <button onClick={() => setActiveTab('corpus')} className={`px-2.5 py-1 rounded ${activeTab === 'corpus' ? 'bg-blue-600 text-white' : 'text-slate-400'}`}>Docs</button>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h1 className="font-extrabold text-lg text-white">IndexForge</h1>
+                    <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
+                      Live Interactive Engine
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 hidden sm:block">
+                    Inverted Index • Okapi BM25 & TF-IDF • Position Verification
+                  </p>
                 </div>
               </div>
 
-              {/* Navigation Tabs (Desktop) */}
-              <div className="hidden md:flex items-center bg-slate-900 border border-slate-800 rounded-xl p-1 text-xs">
+              <div className="flex items-center gap-2 text-xs font-medium">
                 <button
-                  onClick={() => setActiveTab('search')}
-                  className={`px-4 py-1.5 rounded-lg font-medium transition-all ${activeTab === 'search' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
+                  onClick={() => setShowBenchmarkModal(true)}
+                  className="px-3.5 py-2 rounded-xl bg-purple-600/10 hover:bg-purple-600/20 text-purple-300 border border-purple-500/30 transition-all flex items-center gap-1.5"
                 >
-                  🔍 Search & Ranking
-                </button>
-                <button
-                  onClick={() => setActiveTab('dashboard')}
-                  className={`px-4 py-1.5 rounded-lg font-medium transition-all ${activeTab === 'dashboard' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
-                >
-                  ⚡ Engine Benchmarks
-                </button>
-                <button
-                  onClick={() => setActiveTab('corpus')}
-                  className={`px-4 py-1.5 rounded-lg font-medium transition-all ${activeTab === 'corpus' ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
-                >
-                  📁 Corpus ({docsList.length})
-                </button>
-              </div>
-
-              {/* Actions & Links */}
-              <div className="flex items-center gap-2 text-xs font-medium w-full md:w-auto justify-end">
-                <button
-                  onClick={() => setShowIngestModal(true)}
-                  className="px-3.5 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 transition-all flex items-center gap-1.5"
-                >
-                  + Ingest Document
+                  ⚡ Benchmarks (80.6x)
                 </button>
                 <button
                   onClick={() => setShowStatsModal(true)}
                   className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 transition-all flex items-center gap-1.5"
                 >
-                  📊 Stats
+                  📊 Index Stats
                 </button>
                 <a
                   href="https://github.com/Parvinder10/indexforge"
                   target="_blank"
                   rel="noreferrer"
-                  className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 transition-all flex items-center gap-1.5"
+                  className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white transition-all shadow flex items-center gap-1.5"
                 >
-                  GitHub
+                  GitHub Repo →
                 </a>
               </div>
             </div>
           </header>
 
-          {/* Quick Metrics Ribbon */}
-          <div className="bg-slate-900/60 border-b border-slate-800/80 px-4 sm:px-8 py-2.5">
-            <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-4 text-xs">
-              <div className="flex flex-wrap items-center gap-4 text-slate-400 font-mono">
-                <span>Documents: <strong className="text-blue-400">{docsList.length}</strong></span>
-                <span>•</span>
-                <span>Unique Terms: <strong className="text-emerald-400">{Object.keys(invertedData.index).length}</strong></span>
-                <span>•</span>
-                <span>Tokens: <strong className="text-purple-400">{invertedData.totalTokens}</strong></span>
-                <span>•</span>
-                <span>Avg Doc Length: <strong className="text-amber-400">{invertedData.avgdl.toFixed(1)}</strong></span>
-              </div>
-              <div className="flex items-center gap-3">
-                <a
-                  href="https://vercel.com/claim-deployment?code=b0fd4d1b-b617-4d4f-8ff0-d61cb5d3dc81"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-[11px] text-cyan-400 hover:underline flex items-center gap-1"
-                >
-                  ▲ Claim on Vercel
-                </a>
-                <span>•</span>
-                <a
-                  href="https://vercel.com/new/clone?repository-url=https://github.com/Parvinder10/indexforge&root-directory=docs"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-[11px] text-purple-400 hover:underline flex items-center gap-1"
-                >
-                  ▲ Deploy to Vercel
-                </a>
-              </div>
-            </div>
-          </div>
-
-          {/* TAB 1: SEARCH & RETRIEVAL */}
-          {activeTab === 'search' && (
-            <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-8 space-y-6">
-              <div className="w-full max-w-5xl mx-auto space-y-4">
-                {/* Search Bar */}
-                <div className="relative flex items-center">
-                  <input
-                    type="text"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder='Search keywords, exact phrases ("public tender"), or boolean expressions...'
-                    className="w-full pl-12 pr-12 py-3.5 bg-slate-900 border border-slate-700/80 rounded-xl text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base shadow-lg"
-                  />
-                  <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg">🔍</span>
-                  {query && (
-                    <button
-                      onClick={() => setQuery('')}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-
-                {/* Controls */}
-                <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <div className="inline-flex rounded-lg bg-slate-900 p-0.5 border border-slate-800 text-xs">
-                      <button
-                        onClick={() => setAlgorithm('bm25')}
-                        className={`px-3 py-1 rounded-md font-medium transition-all ${
-                          algorithm === 'bm25' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-200'
-                        }`}
-                      >
-                        Okapi BM25
-                      </button>
-                      <button
-                        onClick={() => setAlgorithm('tfidf')}
-                        className={`px-3 py-1 rounded-md font-medium transition-all ${
-                          algorithm === 'tfidf' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-200'
-                        }`}
-                      >
-                        TF-IDF
-                      </button>
-                    </div>
-
-                    {algorithm === 'bm25' && (
-                      <button
-                        onClick={() => setShowTuning(!showTuning)}
-                        className="px-2.5 py-1.5 rounded-lg border border-slate-800 bg-slate-900 text-xs text-slate-300 hover:border-slate-700"
-                      >
-                        ⚙️ k₁={k1.toFixed(2)} b={b.toFixed(2)}
-                      </button>
-                    )}
-
-                    <button
-                      onClick={() => setShowSyntax(!showSyntax)}
-                      className="px-2.5 py-1.5 rounded-lg border border-slate-800 bg-slate-900 text-xs text-slate-400 hover:text-slate-200"
-                    >
-                      💡 Syntax Tips
-                    </button>
-                  </div>
-
-                  <div className="flex items-center gap-2 text-xs">
-                    <span className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 font-mono">
-                      <span className="text-emerald-400 font-semibold">{latencyMs.toFixed(2)} ms</span> latency
-                    </span>
-                    <span className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
-                      <span className="text-slate-100 font-semibold">{hits.length}</span> hits
-                    </span>
-                  </div>
-                </div>
-
-                {/* Tuning Drawer */}
-                {showTuning && algorithm === 'bm25' && (
-                  <div className="p-4 bg-slate-900/90 border border-slate-800 rounded-xl space-y-3 text-xs">
-                    <div className="flex justify-between items-center text-slate-300 font-medium">
-                      <span>BM25 Hyperparameter Tuning</span>
-                      <button onClick={() => { setK1(1.2); setB(0.75); }} className="text-blue-400 hover:underline">
-                        Reset Defaults (k₁=1.2, b=0.75)
-                      </button>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <div className="flex justify-between text-slate-400 mb-1">
-                          <span>Term Frequency Saturation (k₁): <strong>{k1.toFixed(2)}</strong></span>
-                        </div>
-                        <input
-                          type="range" min="0.1" max="3.0" step="0.05" value={k1}
-                          onChange={(e) => setK1(parseFloat(e.target.value))}
-                          className="w-full accent-blue-500"
-                        />
-                      </div>
-                      <div>
-                        <div className="flex justify-between text-slate-400 mb-1">
-                          <span>Document Length Normalization (b): <strong>{b.toFixed(2)}</strong></span>
-                        </div>
-                        <input
-                          type="range" min="0.0" max="1.0" step="0.05" value={b}
-                          onChange={(e) => setB(parseFloat(e.target.value))}
-                          className="w-full accent-blue-500"
-                        />
-                      </div>
-                    </div>
-                  </div>
+          {/* Main Area */}
+          <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-8 space-y-6">
+            <div className="w-full max-w-5xl mx-auto space-y-4">
+              {/* Search Bar */}
+              <div className="relative flex items-center">
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder='Search keywords, exact phrases ("public tender"), or boolean (federal AND procurement)...'
+                  className="w-full pl-12 pr-12 py-3.5 bg-slate-900 border border-slate-700/80 rounded-xl text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 text-base shadow-lg"
+                />
+                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 text-lg">🔍</span>
+                {query && (
+                  <button
+                    onClick={() => setQuery('')}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                  >
+                    ✕
+                  </button>
                 )}
+              </div>
 
-                {/* Syntax Drawer */}
-                {showSyntax && (
-                  <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl text-xs space-y-2">
-                    <div className="font-semibold text-slate-200">Supported Query Patterns:</div>
-                    <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-slate-400">
-                      <li>• <strong>Exact Phrases:</strong> <code className="text-blue-300">"public tender"</code> (enforces token adjacency)</li>
-                      <li>• <strong>Keywords:</strong> <code className="text-blue-300">cybersecurity compliance</code> (BM25 scored)</li>
-                      <li>• <strong>Boolean AND:</strong> <code className="text-blue-300">federal AND procurement</code> (intersection)</li>
-                      <li>• <strong>Boolean OR:</strong> <code className="text-blue-300">tender OR grant</code> (union)</li>
-                    </ul>
-                  </div>
-                )}
-
-                {/* Filters */}
-                <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                  {[
-                    { id: 'all', label: 'All Documents' },
-                    { id: 'tender', label: 'Tenders' },
-                    { id: 'notice', label: 'Notices' },
-                    { id: 'policy', label: 'Policies' },
-                    { id: 'regulation', label: 'Regulations' },
-                    { id: 'tech_doc', label: 'Technical' },
-                  ].map(f => (
+              {/* Controls */}
+              <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="inline-flex rounded-lg bg-slate-900 p-0.5 border border-slate-800 text-xs">
                     <button
-                      key={f.id}
-                      onClick={() => setSelectedType(f.id)}
-                      className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
-                        selectedType === f.id
-                          ? 'bg-blue-600/20 text-blue-300 border border-blue-500/40'
-                          : 'bg-slate-900/60 text-slate-400 hover:text-slate-200 border border-slate-800'
+                      onClick={() => setAlgorithm('bm25')}
+                      className={`px-3 py-1 rounded-md font-medium transition-all ${
+                        algorithm === 'bm25' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-200'
                       }`}
                     >
-                      {f.label}
+                      Okapi BM25
                     </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Results List */}
-              <div className="w-full max-w-5xl mx-auto space-y-4">
-                {hits.length === 0 ? (
-                  <div className="py-16 text-center space-y-3 bg-slate-900/40 border border-slate-800 rounded-2xl p-8">
-                    <h3 className="text-lg font-semibold text-slate-200">No matching documents</h3>
-                    <p className="text-sm text-slate-400">Try searching for "tender", "cybersecurity", "cloud", or ingest a new document.</p>
+                    <button
+                      onClick={() => setAlgorithm('tfidf')}
+                      className={`px-3 py-1 rounded-md font-medium transition-all ${
+                        algorithm === 'tfidf' ? 'bg-blue-600 text-white' : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      TF-IDF
+                    </button>
                   </div>
-                ) : (
-                  hits.map((hit, idx) => {
-                    const style = TYPE_COLORS[hit.doc_type] || { bg: 'bg-slate-800', text: 'text-slate-300', border: 'border-slate-700' };
-                    const scorePct = Math.min(100, Math.round((hit.score / maxScore) * 100));
 
-                    return (
-                      <article
-                        key={hit.doc_id}
-                        onClick={() => setSelectedDoc(docsList.find(d => d.id === hit.doc_id))}
-                        className="p-5 bg-slate-900/80 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl transition-all shadow cursor-pointer group"
-                      >
-                        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
-                          <div>
-                            <div className="flex items-center gap-2">
-                              <span className="text-xs font-mono text-slate-500">#{idx + 1}</span>
-                              <h2 className="text-base sm:text-lg font-semibold text-slate-100 group-hover:text-blue-400 transition-colors">
-                                {hit.title}
-                              </h2>
-                            </div>
-                            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400 mt-1">
-                              <span className={`px-2 py-0.5 rounded border text-[10px] uppercase font-medium ${style.bg} ${style.text} ${style.border}`}>
-                                {hit.doc_type.replace('_', ' ')}
-                              </span>
-                              <span>•</span>
-                              <span>{hit.source}</span>
-                              <span>•</span>
-                              <span>{hit.date}</span>
-                              <span>• {hit.doc_length} tokens</span>
-                            </div>
-                          </div>
+                  {algorithm === 'bm25' && (
+                    <button
+                      onClick={() => setShowTuning(!showTuning)}
+                      className="px-2.5 py-1.5 rounded-lg border border-slate-800 bg-slate-900 text-xs text-slate-300 hover:border-slate-700"
+                    >
+                      ⚙️ k₁={k1.toFixed(2)} b={b.toFixed(2)}
+                    </button>
+                  )}
 
-                          <div className="flex sm:flex-col items-center sm:items-end justify-between gap-1 text-right min-w-[90px]">
-                            <span className="text-xs font-mono text-slate-400">Score: <strong className="text-blue-400">{hit.score.toFixed(3)}</strong></span>
-                            <div className="w-20 bg-slate-800 h-1.5 rounded-full overflow-hidden">
-                              <div className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full rounded-full" style={{ width: `${scorePct}%` }} />
-                            </div>
-                          </div>
-                        </div>
-
-                        <div
-                          className="mt-3 text-sm text-slate-300 leading-relaxed font-sans"
-                          dangerouslySetInnerHTML={{ __html: hit.snippet }}
-                        />
-
-                        <div className="mt-4 pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs">
-                          <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="text-slate-500 text-[11px]">Matched:</span>
-                            {hit.matched_terms.map((term, tIdx) => (
-                              <span key={tIdx} className="px-2 py-0.5 rounded bg-slate-800 text-blue-300 border border-slate-700 font-mono text-[11px]">
-                                {term}
-                              </span>
-                            ))}
-                          </div>
-                          <span className="text-blue-400 group-hover:translate-x-0.5 transition-transform text-[11px]">
-                            View Document →
-                          </span>
-                        </div>
-                      </article>
-                    );
-                  })
-                )}
-              </div>
-            </main>
-          )}
-
-          {/* TAB 2: ENGINE BENCHMARKS DASHBOARD */}
-          {activeTab === 'dashboard' && (
-            <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-8 space-y-6">
-              <div className="max-w-5xl mx-auto space-y-6">
-                <div>
-                  <h2 className="text-2xl font-bold text-white">Engine Performance Benchmarks</h2>
-                  <p className="text-sm text-slate-400 mt-1">
-                    Empirical performance comparison: Inverted Index (C++20) vs Linear Document Scan.
-                  </p>
-                </div>
-
-                {/* Hero Stat Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
-                    <div className="text-xs text-slate-400 uppercase font-mono">1,000 Documents</div>
-                    <div className="text-3xl font-extrabold text-emerald-400 mt-2">80.6x</div>
-                    <div className="text-xs text-slate-400 mt-1">BM25: 1.15 ms vs Linear: 92.77 ms</div>
-                  </div>
-                  <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
-                    <div className="text-xs text-slate-400 uppercase font-mono">10,000 Documents</div>
-                    <div className="text-3xl font-extrabold text-emerald-400 mt-2">58.2x</div>
-                    <div className="text-xs text-slate-400 mt-1">BM25: 17.29 ms vs Linear: 1,005.70 ms</div>
-                  </div>
-                  <div className="p-5 bg-slate-900 border border-slate-800 rounded-2xl">
-                    <div className="text-xs text-slate-400 uppercase font-mono">Multi-Threaded QPS</div>
-                    <div className="text-3xl font-extrabold text-purple-400 mt-2">2,664.5</div>
-                    <div className="text-xs text-slate-400 mt-1">Concurrent reader throughput</div>
-                  </div>
-                </div>
-
-                {/* Benchmark Comparison Table */}
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-                  <div className="p-4 border-b border-slate-800 flex justify-between items-center">
-                    <h3 className="font-semibold text-slate-200">Execution Metrics (Clang++ 23.1, -O3, UCRT)</h3>
-                    <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30">Verified</span>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs font-mono">
-                      <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 font-sans">
-                        <tr>
-                          <th className="p-3">Corpus Metric</th>
-                          <th className="p-3 text-center">1,000 Documents</th>
-                          <th className="p-3 text-center">10,000 Documents</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-800/80">
-                        <tr>
-                          <td className="p-3 font-sans font-medium text-slate-200">Indexing Throughput</td>
-                          <td className="p-3 text-center text-emerald-400 font-bold">129.4 ms (7,730 docs/s)</td>
-                          <td className="p-3 text-center text-emerald-400 font-bold">1,190.2 ms (8,402 docs/s)</td>
-                        </tr>
-                        <tr>
-                          <td className="p-3 font-sans font-medium text-slate-200">Total Postings Managed</td>
-                          <td className="p-3 text-center">28,840</td>
-                          <td className="p-3 text-center">287,489</td>
-                        </tr>
-                        <tr>
-                          <td className="p-3 font-sans font-medium text-slate-200">In-Memory Size (RAM)</td>
-                          <td className="p-3 text-center">2.53 MB</td>
-                          <td className="p-3 text-center">31.0 MB (~3.1 KB/doc)</td>
-                        </tr>
-                        <tr>
-                          <td className="p-3 font-sans font-medium text-slate-200">Delta-VByte Serialized Size</td>
-                          <td className="p-3 text-center text-cyan-400 font-bold">1.13 MB (55.3% reduction)</td>
-                          <td className="p-3 text-center text-cyan-400 font-bold">11.2 MB (63.8% reduction)</td>
-                        </tr>
-                        <tr>
-                          <td className="p-3 font-sans font-medium text-slate-200">Linear Scan Mean Latency</td>
-                          <td className="p-3 text-center text-rose-400">92.77 ms</td>
-                          <td className="p-3 text-center text-rose-400">1,005.70 ms</td>
-                        </tr>
-                        <tr>
-                          <td className="p-3 font-sans font-medium text-slate-200">Inverted Index BM25 Latency</td>
-                          <td className="p-3 text-center text-emerald-400 font-bold">1.15 ms</td>
-                          <td className="p-3 text-center text-emerald-400 font-bold">17.29 ms</td>
-                        </tr>
-                        <tr>
-                          <td className="p-3 font-sans font-medium text-slate-200">BM25 p50 / p99 Latency</td>
-                          <td className="p-3 text-center">1.11 ms / 2.31 ms</td>
-                          <td className="p-3 text-center">16.91 ms / 34.11 ms</td>
-                        </tr>
-                        <tr>
-                          <td className="p-3 font-sans font-medium text-slate-200">Speedup Advantage</td>
-                          <td className="p-3 text-center text-emerald-400 font-extrabold text-sm">80.6x FASTER</td>
-                          <td className="p-3 text-center text-emerald-400 font-extrabold text-sm">58.2x FASTER</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
-            </main>
-          )}
-
-          {/* TAB 3: CORPUS EXPLORER */}
-          {activeTab === 'corpus' && (
-            <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-8 space-y-6">
-              <div className="max-w-5xl mx-auto space-y-4">
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                  <div>
-                    <h2 className="text-2xl font-bold text-white">Indexed Document Corpus</h2>
-                    <p className="text-sm text-slate-400 mt-1">Browse, inspect, and add documents in the live collection.</p>
-                  </div>
                   <button
-                    onClick={() => setShowIngestModal(true)}
-                    className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold shadow transition-all flex items-center gap-1.5"
+                    onClick={() => setShowSyntax(!showSyntax)}
+                    className="px-2.5 py-1.5 rounded-lg border border-slate-800 bg-slate-900 text-xs text-slate-400 hover:text-slate-200"
                   >
-                    + Add New Document
+                    💡 Syntax Tips
                   </button>
                 </div>
 
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-slate-950 text-slate-400 border-b border-slate-800 uppercase font-mono text-[10px]">
-                        <tr>
-                          <th className="p-3.5">ID</th>
-                          <th className="p-3.5">Title</th>
-                          <th className="p-3.5">Type</th>
-                          <th className="p-3.5">Source</th>
-                          <th className="p-3.5">Date</th>
-                          <th className="p-3.5 text-center">Tokens</th>
-                          <th className="p-3.5 text-right">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-800">
-                        {docsList.map(doc => {
-                          const style = TYPE_COLORS[doc.doc_type] || { bg: 'bg-slate-800', text: 'text-slate-300', border: 'border-slate-700' };
-                          const tokens = invertedData.docLengths[doc.id] || 0;
-                          return (
-                            <tr key={doc.id} className="hover:bg-slate-800/40 transition-colors">
-                              <td className="p-3.5 font-mono text-slate-500">#{doc.id}</td>
-                              <td className="p-3.5 font-semibold text-slate-200">{doc.title}</td>
-                              <td className="p-3.5">
-                                <span className={`px-2 py-0.5 rounded border text-[10px] uppercase font-medium ${style.bg} ${style.text} ${style.border}`}>
-                                  {doc.doc_type.replace('_', ' ')}
-                                </span>
-                              </td>
-                              <td className="p-3.5 text-slate-400">{doc.source}</td>
-                              <td className="p-3.5 font-mono text-slate-400">{doc.date}</td>
-                              <td className="p-3.5 text-center font-mono text-blue-400">{tokens}</td>
-                              <td className="p-3.5 text-right">
-                                <button
-                                  onClick={() => setSelectedDoc(doc)}
-                                  className="text-blue-400 hover:text-blue-300 font-medium"
-                                >
-                                  View
-                                </button>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 font-mono">
+                    <span className="text-emerald-400 font-semibold">{latencyMs.toFixed(2)} ms</span> latency
+                  </span>
+                  <span className="px-2.5 py-1 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
+                    <span className="text-slate-100 font-semibold">{hits.length}</span> hits
+                  </span>
                 </div>
               </div>
-            </main>
-          )}
 
-          {/* Ingest Document Modal */}
-          {showIngestModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
-              <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-6 space-y-4">
-                <div className="flex justify-between items-center border-b border-slate-800 pb-3">
-                  <h2 className="text-lg font-bold text-slate-100">+ Ingest New Document</h2>
-                  <button onClick={() => setShowIngestModal(false)} className="text-slate-400 hover:text-slate-100">✕</button>
-                </div>
-                <form onSubmit={handleAddDocument} className="space-y-4 text-xs">
-                  <div>
-                    <label className="block text-slate-300 font-medium mb-1">Document Title</label>
-                    <input
-                      type="text"
-                      required
-                      value={newTitle}
-                      onChange={(e) => setNewTitle(e.target.value)}
-                      placeholder="e.g. Federal Modernization Framework"
-                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
+              {/* Tuning Drawer */}
+              {showTuning && algorithm === 'bm25' && (
+                <div className="p-4 bg-slate-900/90 border border-slate-800 rounded-xl space-y-3 text-xs">
+                  <div className="flex justify-between items-center text-slate-300 font-medium">
+                    <span>BM25 Hyperparameter Tuning</span>
+                    <button onClick={() => { setK1(1.2); setB(0.75); }} className="text-blue-400 hover:underline">
+                      Reset Defaults (k₁=1.2, b=0.75)
+                    </button>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-slate-300 font-medium mb-1">Source Organization</label>
+                      <div className="flex justify-between text-slate-400 mb-1">
+                        <span>Term Frequency Saturation (k₁): <strong>{k1.toFixed(2)}</strong></span>
+                      </div>
                       <input
-                        type="text"
-                        value={newSource}
-                        onChange={(e) => setNewSource(e.target.value)}
-                        placeholder="e.g. Department of Energy"
-                        className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        type="range" min="0.1" max="3.0" step="0.05" value={k1}
+                        onChange={(e) => setK1(parseFloat(e.target.value))}
+                        className="w-full accent-blue-500"
                       />
                     </div>
                     <div>
-                      <label className="block text-slate-300 font-medium mb-1">Document Type</label>
-                      <select
-                        value={newDocType}
-                        onChange={(e) => setNewDocType(e.target.value)}
-                        className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      >
-                        <option value="tender">Public Tender</option>
-                        <option value="notice">Government Notice</option>
-                        <option value="policy">Policy Document</option>
-                        <option value="regulation">Regulation</option>
-                        <option value="tech_doc">Technical Doc</option>
-                      </select>
+                      <div className="flex justify-between text-slate-400 mb-1">
+                        <span>Document Length Normalization (b): <strong>{b.toFixed(2)}</strong></span>
+                      </div>
+                      <input
+                        type="range" min="0.0" max="1.0" step="0.05" value={b}
+                        onChange={(e) => setB(parseFloat(e.target.value))}
+                        className="w-full accent-blue-500"
+                      />
                     </div>
                   </div>
-                  <div>
-                    <label className="block text-slate-300 font-medium mb-1">Document Content</label>
-                    <textarea
-                      required
-                      rows={6}
-                      value={newContent}
-                      onChange={(e) => setNewContent(e.target.value)}
-                      placeholder="Paste unstructured document text..."
-                      className="w-full px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-100 focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono text-xs"
-                    />
+                </div>
+              )}
+
+              {/* Syntax Guide */}
+              {showSyntax && (
+                <div className="p-4 bg-slate-900 border border-slate-800 rounded-xl space-y-2 text-xs">
+                  <div className="flex justify-between text-slate-300 font-semibold">
+                    <span>Query Syntax Examples</span>
+                    <button onClick={() => setShowSyntax(false)} className="text-slate-400 hover:text-slate-200">✕</button>
                   </div>
-                  <div className="flex justify-end gap-2 pt-2 border-t border-slate-800">
-                    <button
-                      type="button"
-                      onClick={() => setShowIngestModal(false)}
-                      className="px-4 py-2 bg-slate-800 text-slate-300 rounded-xl hover:bg-slate-700"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl"
-                    >
-                      Index Document Now
-                    </button>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                    <div className="p-2 bg-slate-950 rounded border border-slate-800 cursor-pointer" onClick={() => { setQuery('"public tender"'); setShowSyntax(false); }}>
+                      <span className="text-blue-400 font-semibold block">Exact Phrase</span>
+                      <code className="text-amber-300">"public tender"</code>
+                    </div>
+                    <div className="p-2 bg-slate-950 rounded border border-slate-800 cursor-pointer" onClick={() => { setQuery('cybersecurity compliance'); setShowSyntax(false); }}>
+                      <span className="text-emerald-400 font-semibold block">Keywords</span>
+                      <code className="text-amber-300">cybersecurity compliance</code>
+                    </div>
+                    <div className="p-2 bg-slate-950 rounded border border-slate-800 cursor-pointer" onClick={() => { setQuery('cloud infrastructure'); setShowSyntax(false); }}>
+                      <span className="text-purple-400 font-semibold block">Multi-term</span>
+                      <code className="text-amber-300">cloud infrastructure</code>
+                    </div>
                   </div>
-                </form>
+                </div>
+              )}
+
+              {/* Document Type Filter Chips */}
+              <div className="flex flex-wrap items-center gap-2 pt-1">
+                <span className="text-xs text-slate-400 mr-1">Filter Type:</span>
+                {[
+                  { id: 'all', label: 'All Documents' },
+                  { id: 'tender', label: 'Public Tenders' },
+                  { id: 'notice', label: 'Gov Notices' },
+                  { id: 'policy', label: 'Policies' },
+                  { id: 'regulation', label: 'Regulations' },
+                  { id: 'tech_doc', label: 'Technical Docs' },
+                ].map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => setSelectedType(t.id)}
+                    className={`px-3 py-1 rounded-full text-xs font-medium transition-all ${
+                      selectedType === t.id
+                        ? 'bg-blue-600/30 border border-blue-500 text-blue-200'
+                        : 'bg-slate-900/60 border border-slate-800 text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
               </div>
             </div>
-          )}
+
+            {/* Results List */}
+            <div className="w-full max-w-5xl mx-auto space-y-4">
+              {hits.length === 0 ? (
+                <div className="py-16 text-center space-y-3 bg-slate-900/40 border border-slate-800 rounded-2xl p-8">
+                  <h3 className="text-lg font-semibold text-slate-200">No matching documents</h3>
+                  <p className="text-sm text-slate-400">Try searching for "tender", "cybersecurity", "cloud", or clear filters.</p>
+                </div>
+              ) : (
+                hits.map((hit, idx) => {
+                  const style = TYPE_COLORS[hit.doc_type] || { bg: 'bg-slate-800', text: 'text-slate-300', border: 'border-slate-700' };
+                  const scorePct = Math.min(100, Math.round((hit.score / maxScore) * 100));
+
+                  return (
+                    <article
+                      key={hit.doc_id}
+                      onClick={() => setSelectedDoc(SAMPLE_DOCUMENTS.find(d => d.id === hit.doc_id))}
+                      className="p-5 bg-slate-900/80 hover:bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-2xl transition-all shadow cursor-pointer group"
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-mono text-slate-500">#{idx + 1}</span>
+                            <h2 className="text-base sm:text-lg font-semibold text-slate-100 group-hover:text-blue-400 transition-colors">
+                              {hit.title}
+                            </h2>
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400 mt-1">
+                            <span className={`px-2 py-0.5 rounded border text-[10px] uppercase font-medium ${style.bg} ${style.text} ${style.border}`}>
+                              {hit.doc_type.replace('_', ' ')}
+                            </span>
+                            <span>•</span>
+                            <span>{hit.source}</span>
+                            <span>•</span>
+                            <span>{hit.date}</span>
+                            <span>• {hit.doc_length} tokens</span>
+                          </div>
+                        </div>
+
+                        <div className="flex sm:flex-col items-center sm:items-end justify-between gap-1 text-right min-w-[90px]">
+                          <span className="text-xs font-mono text-slate-400">Score: <strong className="text-blue-400">{hit.score.toFixed(3)}</strong></span>
+                          <div className="w-20 bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                            <div className="bg-gradient-to-r from-blue-500 to-indigo-500 h-full rounded-full" style={{ width: `${scorePct}%` }} />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div
+                        className="mt-3 text-sm text-slate-300 leading-relaxed font-sans"
+                        dangerouslySetInnerHTML={{ __html: hit.snippet }}
+                      />
+
+                      <div className="mt-4 pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="text-slate-500 text-[11px]">Matched:</span>
+                          {hit.matched_terms.map((term, tIdx) => (
+                            <span key={tIdx} className="px-2 py-0.5 rounded bg-slate-800 text-blue-300 border border-slate-700 font-mono text-[11px]">
+                              {term}
+                            </span>
+                          ))}
+                        </div>
+                        <span className="text-blue-400 group-hover:translate-x-0.5 transition-transform text-[11px]">
+                          View Document →
+                        </span>
+                      </div>
+                    </article>
+                  );
+                })
+              )}
+            </div>
+          </main>
 
           {/* Full Document Viewer Modal */}
           {selectedDoc && (
@@ -933,7 +610,7 @@
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-center">
                   <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
-                    <div className="text-xl font-bold text-blue-400">{docsList.length}</div>
+                    <div className="text-xl font-bold text-blue-400">{SAMPLE_DOCUMENTS.length}</div>
                     <div className="text-xs text-slate-400">Active Docs</div>
                   </div>
                   <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
@@ -951,6 +628,66 @@
                 </div>
                 <div className="flex justify-end pt-2">
                   <button onClick={() => setShowStatsModal(false)} className="px-5 py-2 bg-slate-800 text-slate-200 rounded-xl text-xs font-medium">
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Benchmark Modal */}
+          {showBenchmarkModal && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+              <div className="relative w-full max-w-3xl bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl p-6 space-y-4">
+                <div className="flex justify-between items-center border-b border-slate-800 pb-3">
+                  <h2 className="text-lg font-bold text-slate-100">Performance Benchmark Results (Measured)</h2>
+                  <button onClick={() => setShowBenchmarkModal(false)} className="text-slate-400 hover:text-slate-100">✕</button>
+                </div>
+                <div className="grid grid-cols-3 gap-3 text-center">
+                  <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
+                    <div className="text-2xl font-bold text-emerald-400">80.6x</div>
+                    <div className="text-xs text-slate-400">Speedup vs Linear (1k)</div>
+                  </div>
+                  <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
+                    <div className="text-2xl font-bold text-blue-400">1.15 ms</div>
+                    <div className="text-xs text-slate-400">BM25 Mean Latency</div>
+                  </div>
+                  <div className="p-3 bg-slate-950 rounded-xl border border-slate-800">
+                    <div className="text-2xl font-bold text-purple-400">2,665</div>
+                    <div className="text-xs text-slate-400">Multi-threaded QPS</div>
+                  </div>
+                </div>
+                <div className="overflow-x-auto text-xs border border-slate-800 rounded-xl">
+                  <table className="w-full text-left font-mono">
+                    <thead className="bg-slate-900 font-sans text-slate-400">
+                      <tr>
+                        <th className="p-2">Dataset</th>
+                        <th className="p-2">Indexing Time</th>
+                        <th className="p-2">Linear Scan</th>
+                        <th className="p-2">Inverted BM25</th>
+                        <th className="p-2">Speedup</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800">
+                      <tr>
+                        <td className="p-2 font-sans font-medium text-slate-200">1,000 Documents</td>
+                        <td className="p-2">129.4 ms</td>
+                        <td className="p-2">92.77 ms</td>
+                        <td className="p-2 text-emerald-400 font-bold">1.15 ms</td>
+                        <td className="p-2 text-emerald-400 font-bold">80.6x</td>
+                      </tr>
+                      <tr>
+                        <td className="p-2 font-sans font-medium text-slate-200">10,000 Documents</td>
+                        <td className="p-2">1,190.2 ms</td>
+                        <td className="p-2">1,005.70 ms</td>
+                        <td className="p-2 text-emerald-400 font-bold">17.29 ms</td>
+                        <td className="p-2 text-emerald-400 font-bold">58.2x</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div className="flex justify-end pt-2">
+                  <button onClick={() => setShowBenchmarkModal(false)} className="px-5 py-2 bg-slate-800 text-slate-200 rounded-xl text-xs font-medium">
                     Close
                   </button>
                 </div>

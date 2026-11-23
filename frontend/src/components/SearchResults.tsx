@@ -69,6 +69,9 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-4">
+      <div className="flex items-center justify-between text-xs text-slate-400 px-1">
+        <span>Showing <strong className="text-slate-200">{hits.length}</strong> of <strong className="text-slate-200">{totalHits}</strong> matching documents</span>
+      </div>
       {hits.map((hit, idx) => {
         const typeStyle = TYPE_COLORS[hit.doc_type] || {
           bg: 'bg-slate-500/10',

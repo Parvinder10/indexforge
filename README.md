@@ -4,8 +4,7 @@
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-00599C?logo=c%2B%2B)](https://en.cppreference.com/w/cpp/20)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react)](https://react.dev/)
-[![GitHub Pages](https://img.shields.io/badge/Live_Demo-GitHub_Pages-22c55e?logo=github)](https://parvinder10.github.io/indexforge/)
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Parvinder10/indexforge&root-directory=docs)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-GitHub_Pages-22c55e?logo=github)](https://parvinder10.github.io/indexforge/)
 
 IndexForge is a functional, custom-built full-text search engine implemented in **modern C++20**, paired with a **Python FastAPI** service layer and a **React + TypeScript** interface.
 
@@ -13,46 +12,27 @@ Designed to address search inefficiency across thousands of unstructured real-wo
 
 ---
 
-## 🌐 Live Dashboard Interface & Demos
+## 🌐 Live Interface & Demos
 
 You can explore and interact with IndexForge in multiple ways:
 
 ### 1. Online Live Web Demo (Zero Installation)
 Experience IndexForge instantly in your browser powered by GitHub Pages:
 - **Live Demo Link:** **[https://parvinder10.github.io/indexforge/](https://parvinder10.github.io/indexforge/)**
-- **Features:**
-  - 🔍 **Search & Relevance:** Client-side BM25 & TF-IDF relevance ranking, full-text Boolean and exact phrase search, interactive parameter sliders ($k_1, b$), and real-time highlighted snippets across public documents.
-  - ⚡ **Engine Benchmarks Dashboard:** Interactive comparison of Inverted Index vs Linear Scan (80.6x speedup, 2,665 QPS, memory footprint breakdown).
-  - 📁 **Corpus & Live Ingestion:** Document browser and dynamic ingestion modal to index custom documents on-the-fly.
+- **Features:** Client-side BM25 & TF-IDF relevance ranking, full-text Boolean and exact phrase search, interactive parameter sliders ($k_1, b$), document viewer modals, and real-time highlighted snippets across government notices, tenders, and policies.
 
 > **GitHub Pages Configuration:**  
-> Enabled on branch `main`, folder `/docs`. Active at `https://parvinder10.github.io/indexforge/`.
+> If deploying a fork or fresh repository, enable GitHub Pages via:  
+> `Repository Settings` → `Pages` → `Source: Deploy from a branch` → `Branch: main, folder: /docs` → `Save`.
 
-### 2. Vercel Live Dashboard Deployment
-Deploy or claim the live dashboard directly to Parvinder's Vercel account ([https://vercel.com/parvinder10s-projects](https://vercel.com/parvinder10s-projects)):
-
-- **1-Click Deploy to Vercel:**  
-  [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Parvinder10/indexforge&root-directory=docs)  
-  *Click the button above to import and deploy directly to your Vercel workspace in seconds.*
-
-- **Claim Active Vercel Deployment:**  
-  [Claim Deployment into Parvinder's Account](https://vercel.com/claim-deployment?code=b0fd4d1b-b617-4d4f-8ff0-d61cb5d3dc81)  
-  *Pre-built instance ready to be claimed into your Vercel project.*
-
-- **Manual Import via Vercel Dashboard:**
-  1. Open [https://vercel.com/new](https://vercel.com/new).
-  2. Select your repository `Parvinder10/indexforge`.
-  3. Set **Root Directory** to `docs`.
-  4. Click **Deploy**. Vercel will build and serve the live dashboard automatically.
-
-### 3. Local 1-Click Desktop Launcher
+### 2. Local 1-Click Desktop Launcher
 Run the high-performance native C++ engine and web interface locally with a single command:
 ```bash
 python run.py
 ```
 This launcher automatically verifies the compiled C++ engine, starts the FastAPI service at `http://127.0.0.1:8000`, and opens the dashboard in your default browser.
 
-### 4. Interactive API Documentation
+### 3. Interactive API Documentation
 - **Swagger UI:** `http://127.0.0.1:8000/docs`
 - **ReDoc:** `http://127.0.0.1:8000/redoc`
 
@@ -117,50 +97,124 @@ Benchmarks were executed on an **x86_64 architecture running Clang++ 23.1 with `
 
 ---
 
-## 4. Quickstart Guide
+## 4. Local Development & Interface Preview Guide
+
+Follow this guide to run, inspect, and test the complete application locally on your machine.
 
 ### 4.1 Prerequisites
-Ensure you have installed:
-- CMake 3.20+ and Ninja (or Make)
-- A C++20 compatible compiler (`clang++`, `g++`, or `cl.exe`)
-- Python 3.10+ with `fastapi` and `uvicorn`
+Ensure the following tools are installed:
+- **C++20 Compiler:** Clang++ (v14+), GCC (v11+), or MSVC (v19.29+ / VS 2022)
+- **Build System:** CMake (v3.20+) and Ninja (or Make)
+- **Python:** Python 3.10+ (with `pip`)
+- **Node.js:** Node.js v18+ and `npm` (for the React + Vite development server)
 
-### 4.2 Building the C++ Engine
-```powershell
-# 1. Configure with CMake
-cmake -B build -G Ninja -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang -DCMAKE_BUILD_TYPE=Release
+---
 
-# 2. Build shared library, CLI, test suite, and benchmark executable
-cmake --build build
+### 4.2 1-Click Full-Stack Startup (Recommended)
 
-# 3. Run all automated unit and integration tests
-.\build\indexforge_tests.exe
-```
+IndexForge includes an automated launcher that verifies your C++ build, checks Python and Node dependencies, starts the backend and frontend development servers concurrently, and launches your default browser:
 
-### 4.3 Running the Search Engine CLI
-```powershell
-# Search using BM25
-.\build\indexforge_cli.exe search --query "public tender" --algo bm25
-
-# Run baseline linear scan comparison
-.\build\indexforge_cli.exe search --query "public tender" --linear
-
-# Check index statistics
-.\build\indexforge_cli.exe stats
-
-# Verify index file integrity
-.\build\indexforge_cli.exe verify --path index.forge
-```
-
-### 4.4 Launching the Web Service & UI
-```powershell
-# Option A: 1-Click launcher (checks engine, launches server, and opens browser)
+```bash
+# Windows / macOS / Linux
 python run.py
 
-# Option B: Manual Uvicorn command
-python -m uvicorn api.main:app --host 127.0.0.1 --port 8000
+# Or use the convenience scripts:
+# Windows:
+start.bat
+
+# Linux / macOS:
+./start.sh
 ```
-Open **[http://127.0.0.1:8000](http://127.0.0.1:8000)** in your browser to access the search dashboard, or visit **[http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)** for interactive OpenAPI Swagger documentation.
+
+#### What `run.py` does automatically:
+1. **Verifies C++ Core:** Checks for `build/indexforge.dll` (or `.so`/`.dylib`); automatically runs CMake compilation if not found.
+2. **Checks Dependencies:** Ensures `fastapi`, `uvicorn`, `pydantic`, and frontend `node_modules` are ready.
+3. **Starts FastAPI Backend:** Spawns on `http://127.0.0.1:8000` with CORS configured for local dev ports.
+4. **Starts Vite Dev Server:** Spawns on `http://localhost:5173` with Hot Module Replacement (HMR) and `/api` reverse proxying.
+5. **Opens Your Browser:** Immediately navigates to `http://localhost:5173`.
+6. **Graceful Teardown:** Pressing `Ctrl+C` terminates both services cleanly without leaving zombie processes.
+
+#### CLI Options for `run.py`:
+```bash
+python run.py --backend-only      # Launch only FastAPI backend (port 8000)
+python run.py --frontend-only     # Launch only Vite frontend (port 5173)
+python run.py --build-only        # Compile C++ engine and build frontend dist, then exit
+python run.py --backend-port 8080 # Custom backend port
+python run.py --frontend-port 3000# Custom frontend port
+python run.py --no-browser        # Do not launch default browser automatically
+```
+
+---
+
+### 4.3 Running Services Individually (Manual Mode)
+
+If you prefer running services in separate terminal windows:
+
+#### Terminal 1: Build C++ Core and Start Backend API
+```powershell
+# 1. Compile C++ engine and run test suite
+cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build build
+.\build\indexforge_tests.exe
+
+# 2. Launch FastAPI with auto-reload
+python -m uvicorn api.main:app --host 127.0.0.1 --port 8000 --reload
+```
+- **Backend API & UI:** [http://127.0.0.1:8000](http://127.0.0.1:8000)
+- **Interactive OpenAPI Documentation:** [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
+
+#### Terminal 2: Start React + Vite Dev Server
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+- **React Frontend (with HMR):** [http://localhost:5173](http://localhost:5173)
+
+---
+
+### 4.4 Local Testing & UI Walkthrough
+
+Once running, you can test every interactive component with real system data:
+
+1. **Keyword & Relevance Search:**
+   - Type `public tender` or `cybersecurity compliance` and view ranked hits.
+   - Switch between **BM25** and **TF-IDF** algorithms.
+   - Adjust the **$k_1$** (term saturation) and **$b$** (length normalization) sliders to watch rankings update live.
+2. **Boolean & Phrase Search:**
+   - Test exact phrase matching: `"public tender"` (verifies token position adjacency).
+   - Test Boolean logic: `federal AND procurement`, `notice OR tender`, `compliance NOT legacy`.
+   - Test grouping: `(security OR cloud) AND federal`.
+3. **Linear Scan Comparison:**
+   - Toggle the **Linear Scan** switch to run queries through the unindexed baseline scanner and compare latency against the Inverted Index.
+4. **Document Inspection & Deletion:**
+   - Click any search result to open the full document in the **Document Viewer Modal**.
+   - Inspect full text, source, date, token length, and file metadata.
+   - Click **Delete Document** to test atomic deletion from both the Inverted Index and SQLite storage.
+5. **Document Ingestion:**
+   - Click **+ Ingest** to add a custom document with your own title, source, type, and content.
+   - Or click **Load Built-in Real-World Dataset** to re-import standard federal documents.
+6. **Corpus Statistics & Integrity Verification:**
+   - Click **📊 Stats** to view active documents, unique terms, postings count, memory footprint, and cache hit rates.
+   - Click **Verify CRC32** to run an IEEE 802.3 checksum validation on the binary index file.
+   - Click **Clear Cache** or **Save/Load Index** to test persistence.
+7. **Live Engine Benchmarking:**
+   - Click **⚡ Benchmarks** to view empirical scaling tables (1k vs 10k documents).
+   - Click **Run Live Benchmark** to execute `indexforge_benchmark.exe` directly on your CPU and inspect live throughput.
+
+---
+
+### 4.5 Troubleshooting Common Local Issues
+
+| Issue | Cause | Solution |
+| :--- | :--- | :--- |
+| **Port 8000 or 5173 already in use** | Another local service is bound to the port. | Run `python run.py --backend-port 8080 --frontend-port 5174` |
+| **Node.js or npm not installed** | Node is not present on the system. | Open `http://127.0.0.1:8000/`. FastAPI serves the precompiled production React build directly without requiring Node.js. |
+| **CMake cannot find compiler** | Missing C++20 toolchain. | Ensure Clang, GCC, or Visual Studio C++ Build Tools (MSVC) are installed and accessible in your system `PATH`. |
+| **Missing Python packages** | Virtualenv lacks dependencies. | Run `pip install fastapi uvicorn pydantic`. |
+| **CORS errors in browser console** | Origin mismatch during manual startup. | CORS is configured for all local ports (`localhost` & `127.0.0.1` on any port) in `api/main.py`. Ensure you access via `localhost` or `127.0.0.1`. |
+
+---
 
 ---
 

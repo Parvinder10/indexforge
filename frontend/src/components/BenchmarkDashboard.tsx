@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { runLiveBenchmark } from '../api';
 
 interface BenchmarkDashboardProps {
   isOpen: boolean;
@@ -19,12 +20,7 @@ export const BenchmarkDashboard: React.FC<BenchmarkDashboardProps> = ({
     setRunning(true);
     setLiveOutput(null);
     try {
-      const res = await fetch('/api/benchmark', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ corpus_size: activeTab === '1k' ? 1000 : 10000 }),
-      });
-      const data = await res.json();
+      const data = await runLiveBenchmark(activeTab === '1k' ? 1000 : 10000);
       setLiveOutput(data.stdout || data.stderr || 'Benchmark completed.');
     } catch (e) {
       setLiveOutput(`Error running live benchmark: ${e}`);
