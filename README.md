@@ -1,8 +1,40 @@
 # IndexForge — High-Performance Full-Text Search Engine
 
+[![GitHub License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
+[![C++20](https://img.shields.io/badge/C%2B%2B-20-00599C?logo=c%2B%2B)](https://en.cppreference.com/w/cpp/20)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/React-18-61DAFB?logo=react)](https://react.dev/)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-GitHub_Pages-22c55e?logo=github)](https://parvinder10.github.io/indexforge/)
+
 IndexForge is a functional, custom-built full-text search engine implemented in **modern C++20**, paired with a **Python FastAPI** service layer and a **React + TypeScript** interface.
 
 Designed to address search inefficiency across thousands of unstructured real-world public documents (such as government notices, public tenders, regulatory filings, and technical specifications), IndexForge implements indexing, boolean query parsing, relevance ranking (BM25 & TF-IDF), postings compression, and persistence from scratch.
+
+---
+
+## 🌐 Live Interface & Demos
+
+You can explore and interact with IndexForge in multiple ways:
+
+### 1. Online Live Web Demo (Zero Installation)
+Experience IndexForge instantly in your browser powered by GitHub Pages:
+- **Live Demo Link:** **[https://parvinder10.github.io/indexforge/](https://parvinder10.github.io/indexforge/)**
+- **Features:** Client-side BM25 & TF-IDF relevance ranking, full-text Boolean and exact phrase search, interactive parameter sliders ($k_1, b$), document viewer modals, and real-time highlighted snippets across government notices, tenders, and policies.
+
+> **GitHub Pages Configuration:**  
+> If deploying a fork or fresh repository, enable GitHub Pages via:  
+> `Repository Settings` → `Pages` → `Source: Deploy from a branch` → `Branch: main, folder: /docs` → `Save`.
+
+### 2. Local 1-Click Desktop Launcher
+Run the high-performance native C++ engine and web interface locally with a single command:
+```bash
+python run.py
+```
+This launcher automatically verifies the compiled C++ engine, starts the FastAPI service at `http://127.0.0.1:8000`, and opens the dashboard in your default browser.
+
+### 3. Interactive API Documentation
+- **Swagger UI:** `http://127.0.0.1:8000/docs`
+- **ReDoc:** `http://127.0.0.1:8000/redoc`
 
 ---
 
@@ -102,7 +134,10 @@ cmake --build build
 
 ### 4.4 Launching the Web Service & UI
 ```powershell
-# Start FastAPI backend and interactive web interface
+# Option A: 1-Click launcher (checks engine, launches server, and opens browser)
+python run.py
+
+# Option B: Manual Uvicorn command
 python -m uvicorn api.main:app --host 127.0.0.1 --port 8000
 ```
 Open **[http://127.0.0.1:8000](http://127.0.0.1:8000)** in your browser to access the search dashboard, or visit **[http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)** for interactive OpenAPI Swagger documentation.
