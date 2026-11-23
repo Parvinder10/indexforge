@@ -1,0 +1,17 @@
+FEDERAL EMERGENCY DIRECTIVE: CISA-ED-2026-03
+AGENCY: Cybersecurity and Infrastructure Security Agency (CISA)
+DATE: 2026-04-05
+DOCUMENT TYPE: notice
+TOPIC: Mandatory Remediation of Known Exploited Vulnerabilities in Network Edge Devices
+
+BACKGROUND:
+CISA has observed active, widespread exploitation of critical remote code execution vulnerabilities in perimeter network appliances, SSL VPN gateways, and edge routing equipment utilized by federal civilian executive branch agencies and critical infrastructure operators.
+
+MANDATED ACTIONS:
+1. Within 24 hours of receipt of this directive, all agencies must conduct forensic analysis and review network telemetry for indicators of compromise (IoC) cataloged in CISA Advisory AA26-095A.
+2. Disconnect non-compliant or end-of-life edge appliances from agency networks immediately.
+3. Apply vendor-released security patches and firmware updates to all exposed perimeter interfaces.
+4. Enforce phishing-resistant multi-factor authentication (MFA) on all remote management channels.
+
+REPORTING REQUIREMENTS:
+Agencies must submit a formal status completion report to CISA Operational Directorate by no later than 5:00 PM Eastern Standard Time on the third business day following directive issuance. Failure to comply may result in operational isolation of agency networks from the federal backbone.
