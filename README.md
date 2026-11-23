@@ -4,7 +4,8 @@
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-00599C?logo=c%2B%2B)](https://en.cppreference.com/w/cpp/20)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi)](https://fastapi.tiangolo.com/)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react)](https://react.dev/)
-[![Live Demo](https://img.shields.io/badge/Live_Demo-GitHub_Pages-22c55e?logo=github)](https://parvinder10.github.io/indexforge/)
+[![GitHub Pages](https://img.shields.io/badge/Live_Demo-GitHub_Pages-22c55e?logo=github)](https://parvinder10.github.io/indexforge/)
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Parvinder10/indexforge&root-directory=docs)
 
 IndexForge is a functional, custom-built full-text search engine implemented in **modern C++20**, paired with a **Python FastAPI** service layer and a **React + TypeScript** interface.
 
@@ -12,27 +13,46 @@ Designed to address search inefficiency across thousands of unstructured real-wo
 
 ---
 
-## 🌐 Live Interface & Demos
+## 🌐 Live Dashboard Interface & Demos
 
 You can explore and interact with IndexForge in multiple ways:
 
 ### 1. Online Live Web Demo (Zero Installation)
 Experience IndexForge instantly in your browser powered by GitHub Pages:
 - **Live Demo Link:** **[https://parvinder10.github.io/indexforge/](https://parvinder10.github.io/indexforge/)**
-- **Features:** Client-side BM25 & TF-IDF relevance ranking, full-text Boolean and exact phrase search, interactive parameter sliders ($k_1, b$), document viewer modals, and real-time highlighted snippets across government notices, tenders, and policies.
+- **Features:**
+  - 🔍 **Search & Relevance:** Client-side BM25 & TF-IDF relevance ranking, full-text Boolean and exact phrase search, interactive parameter sliders ($k_1, b$), and real-time highlighted snippets across public documents.
+  - ⚡ **Engine Benchmarks Dashboard:** Interactive comparison of Inverted Index vs Linear Scan (80.6x speedup, 2,665 QPS, memory footprint breakdown).
+  - 📁 **Corpus & Live Ingestion:** Document browser and dynamic ingestion modal to index custom documents on-the-fly.
 
 > **GitHub Pages Configuration:**  
-> If deploying a fork or fresh repository, enable GitHub Pages via:  
-> `Repository Settings` → `Pages` → `Source: Deploy from a branch` → `Branch: main, folder: /docs` → `Save`.
+> Enabled on branch `main`, folder `/docs`. Active at `https://parvinder10.github.io/indexforge/`.
 
-### 2. Local 1-Click Desktop Launcher
+### 2. Vercel Live Dashboard Deployment
+Deploy or claim the live dashboard directly to Parvinder's Vercel account ([https://vercel.com/parvinder10s-projects](https://vercel.com/parvinder10s-projects)):
+
+- **1-Click Deploy to Vercel:**  
+  [![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Parvinder10/indexforge&root-directory=docs)  
+  *Click the button above to import and deploy directly to your Vercel workspace in seconds.*
+
+- **Claim Active Vercel Deployment:**  
+  [Claim Deployment into Parvinder's Account](https://vercel.com/claim-deployment?code=b0fd4d1b-b617-4d4f-8ff0-d61cb5d3dc81)  
+  *Pre-built instance ready to be claimed into your Vercel project.*
+
+- **Manual Import via Vercel Dashboard:**
+  1. Open [https://vercel.com/new](https://vercel.com/new).
+  2. Select your repository `Parvinder10/indexforge`.
+  3. Set **Root Directory** to `docs`.
+  4. Click **Deploy**. Vercel will build and serve the live dashboard automatically.
+
+### 3. Local 1-Click Desktop Launcher
 Run the high-performance native C++ engine and web interface locally with a single command:
 ```bash
 python run.py
 ```
 This launcher automatically verifies the compiled C++ engine, starts the FastAPI service at `http://127.0.0.1:8000`, and opens the dashboard in your default browser.
 
-### 3. Interactive API Documentation
+### 4. Interactive API Documentation
 - **Swagger UI:** `http://127.0.0.1:8000/docs`
 - **ReDoc:** `http://127.0.0.1:8000/redoc`
 
