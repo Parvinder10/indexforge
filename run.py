@@ -163,7 +163,7 @@ def main():
             "--port", str(args.backend_port),
             "--log-level", "warning"
         ]
-        p_back = subprocess.Popen(cmd_backend, cwd=REPO_ROOT)
+        p_back = subprocess.Popen(cmd_backend, cwd=REPO_ROOT, stdin=subprocess.PIPE)
         processes.append(p_back)
 
     # 4. Start Frontend (Vite on 5173)

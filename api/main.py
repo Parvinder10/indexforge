@@ -66,13 +66,38 @@ def startup_event():
         DB = MetadataDB()
         PIPELINE = DocumentIngestionPipeline(ENGINE, DB)
 
-        # Ingest sample docs on startup if empty
-        if DB.count_documents() == 0:
-            sample_dir = Path(__file__).resolve().parent.parent / "data" / "sample_docs"
-            if sample_dir.exists():
-                print(f"Indexing initial sample documents from {sample_dir}...")
-                PIPELINE.ingest_directory(str(sample_dir))
-                print(f"Indexed {DB.count_documents()} sample documents.")
+        # 1. Try loading persisted C++ index if available
+        forge_file = Path(__file__).resolve().parent.parent / "index.forge"
+        if forge_file.exists():
+            ENGINE.load_index(str(forge_file))
+
+        # 2. If C++ engine is empty, re-populate from DB or sample docs
+        engine_stats = ENGINE.get_stats()
+        if engine_stats.get("total_documents", 0) == 0:
+            db_docs = DB.list_documents(limit=10000)
+            if db_docs:
+                print(f"Re-indexing {len(db_docs)} documents from SQLite metadata database...")
+                for d in db_docs:
+                    full_doc = DB.get_document(d["id"])
+                    if full_doc and full_doc.get("content"):
+                        ENGINE.index_document(
+                            doc_id=d["id"],
+                            title=full_doc.get("title", ""),
+                            source=full_doc.get("source", ""),
+                            date=full_doc.get("date", ""),
+                            doc_type=full_doc.get("doc_type", "policy"),
+                            content=full_doc.get("content", "")
+                        )
+                print("Re-indexing complete.")
+            else:
+                sample_dir = Path(__file__).resolve().parent.parent / "data" / "sample_docs"
+                if sample_dir.exists():
+                    print(f"Indexing initial sample documents from {sample_dir}...")
+                    PIPELINE.ingest_directory(str(sample_dir))
+                    print(f"Indexed {DB.count_documents()} sample documents.")
+
+        # Persist index snapshot
+        ENGINE.save_index(str(forge_file))
     except Exception as e:
         print(f"Warning during startup: {e}")
 
