@@ -9,6 +9,7 @@ import os
 import sys
 import time
 import signal
+import socket
 import shutil
 import urllib.request
 import subprocess
@@ -18,6 +19,19 @@ import argparse
 
 REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(REPO_ROOT, "frontend")
+
+def is_port_in_use(port, host="127.0.0.1"):
+    """Check if a network port is already bound."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(0.5)
+        return s.connect_ex((host, port)) == 0
+
+def find_available_port(start_port, host="127.0.0.1"):
+    """Find next available free TCP port."""
+    port = start_port
+    while is_port_in_use(port, host):
+        port += 1
+    return port
 
 def find_engine_library():
     """Locate the compiled C++20 engine library."""
@@ -138,6 +152,14 @@ def main():
         print("[✓] Build complete.")
         return
 
+    backend_port = find_available_port(args.backend_port)
+    if backend_port != args.backend_port:
+        print(f"[*] Port {args.backend_port} is in use by another app. Assigned backend to port {backend_port}.")
+
+    frontend_port = find_available_port(args.frontend_port)
+    if frontend_port != args.frontend_port:
+        print(f"[*] Port {args.frontend_port} is in use by another app. Assigned frontend to port {frontend_port}.")
+
     processes = []
 
     def shutdown_all():
@@ -153,41 +175,44 @@ def main():
                     pass
         print("[✓] All services terminated.")
 
-    # 3. Start Backend (FastAPI on 8000)
+    # 3. Start Backend (FastAPI)
     if not args.frontend_only:
-        print(f"[*] Starting FastAPI Backend on http://127.0.0.1:{args.backend_port}...")
+        print(f"[*] Starting FastAPI Backend on http://127.0.0.1:{backend_port}...")
         cmd_backend = [
             sys.executable, "-m", "uvicorn",
             "api.main:app",
             "--host", "127.0.0.1",
-            "--port", str(args.backend_port),
+            "--port", str(backend_port),
             "--log-level", "warning"
         ]
         p_back = subprocess.Popen(cmd_backend, cwd=REPO_ROOT, stdin=subprocess.PIPE)
         processes.append(p_back)
 
-    # 4. Start Frontend (Vite on 5173)
+    # 4. Start Frontend (React + Vite)
     if not args.backend_only:
         check_node_deps()
         npm_bin = shutil.which("npm.cmd" if os.name == "nt" else "npm")
         if not npm_bin:
             print("[!] npm not found. Cannot launch Vite dev server.")
         else:
-            print(f"[*] Starting React + Vite Dev Server on http://localhost:{args.frontend_port}...")
-            cmd_frontend = [npm_bin, "run", "dev", "--", "--host", "localhost", "--port", str(args.frontend_port)]
-            p_front = subprocess.Popen(cmd_frontend, cwd=FRONTEND_DIR, shell=(os.name == 'nt'), stdin=subprocess.PIPE)
+            print(f"[*] Starting React + Vite Dev Server on http://localhost:{frontend_port}...")
+            env = os.environ.copy()
+            env["BACKEND_PORT"] = str(backend_port)
+            env["FRONTEND_PORT"] = str(frontend_port)
+            cmd_frontend = [npm_bin, "run", "dev", "--", "--host", "localhost", "--port", str(frontend_port)]
+            p_front = subprocess.Popen(cmd_frontend, cwd=FRONTEND_DIR, shell=(os.name == 'nt'), env=env, stdin=subprocess.PIPE)
             processes.append(p_front)
 
     # 5. Health Check & Browser Launch
-    target_url = f"http://localhost:{args.frontend_port}" if not args.backend_only else f"http://127.0.0.1:{args.backend_port}"
-    health_url = f"http://127.0.0.1:{args.backend_port}/api/health" if not args.frontend_only else target_url
+    target_url = f"http://localhost:{frontend_port}" if not args.backend_only else f"http://127.0.0.1:{backend_port}"
+    health_url = f"http://127.0.0.1:{backend_port}/api/health" if not args.frontend_only else target_url
 
     print("\n" + "=" * 68)
     if not args.frontend_only:
-        print(f"  Backend API:         http://127.0.0.1:{args.backend_port}")
-        print(f"  API Documentation:   http://127.0.0.1:{args.backend_port}/docs")
+        print(f"  Backend API:         http://127.0.0.1:{backend_port}")
+        print(f"  API Documentation:   http://127.0.0.1:{backend_port}/docs")
     if not args.backend_only:
-        print(f"  Frontend UI (Vite):  http://localhost:{args.frontend_port}")
+        print(f"  Frontend UI (Vite):  http://localhost:{frontend_port}")
     print("=" * 68 + "\n")
 
     if not args.no_browser:
