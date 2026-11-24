@@ -1,0 +1,17 @@
+DEPARTMENT OF DEFENSE ZERO TRUST STRATEGY AND EXECUTION ROADMAP
+AGENCY: Department of Defense (DoD), Office of the CIO
+DATE: 2026-06-12
+DOCUMENT TYPE: tech_doc
+CLASSIFICATION: UNCLASSIFIED // PUBLIC RELEASE
+
+1. EXECUTIVE VISION
+The Department of Defense must maintain information advantage in contested cyberspace environments. Legacy perimeter defenses that trust internal network traffic are obsolete against sophisticated state adversaries. Zero Trust architecture assumes that hostile actors are already present on the network, enforcing continuous authentication and micro-segmentation across all endpoints.
+
+2. SEVEN PILLARS OF ZERO TRUST
+- Pillar 1: User. Continuous identity verification using PKI hardware tokens, behavioral biometrics, and dynamic context-based risk scoring.
+- Pillar 2: Device. Continuous compliance inspection, hardware root of trust (TPM 2.0), and automated containment of non-compliant hosts.
+- Pillar 3: Applications and Workloads. Software bill of materials (SBOM) validation, micro-segmentation, and API authorization gateways.
+- Pillar 4: Data. Enterprise data labeling, tag-based access control, cryptographic key protection, and DLP filtering.
+- Pillar 5: Network and Environment. Software-defined perimeter (SDP), encrypted overlays, and physical boundary protections.
+- Pillar 6: Automation and Orchestration. Automated incident response playbooks and rapid revocation of compromised credentials.
+- Pillar 7: Visibility and Analytics. Centralized SIEM/SOAR ingestion of host and network telemetry with real-time anomaly detection.

@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """
-IndexForge — Unified Full-Stack Local Launcher
-Coordinates C++ build verification, FastAPI backend (http://127.0.0.1:8000),
-and React + Vite development server (http://localhost:5173).
+IndexForge — Unified Hybrid C++20 & Java 21 Search Platform Launcher
+Orchestrates:
+  1. C++20 Search Engine Core via gRPC Server (port 50051)
+  2. Java 21 + Spring Boot 3 Application Backend (http://127.0.0.1:8080)
+  3. React 18 + TypeScript + Vite Frontend (http://localhost:5174)
 """
 
 import os
 import sys
 import time
-import signal
 import socket
 import shutil
 import urllib.request
@@ -19,6 +20,8 @@ import argparse
 
 REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
 FRONTEND_DIR = os.path.join(REPO_ROOT, "frontend")
+JAVA_API_DIR = os.path.join(REPO_ROOT, "java-api")
+GRPC_SERVER_DIR = os.path.join(REPO_ROOT, "cpp-search-engine", "grpc_server")
 
 def is_port_in_use(port, host="127.0.0.1"):
     """Check if a network port is already bound."""
@@ -39,18 +42,36 @@ def find_engine_library():
         # Windows
         os.path.join(REPO_ROOT, "build", "indexforge.dll"),
         os.path.join(REPO_ROOT, "build", "Release", "indexforge.dll"),
-        os.path.join(REPO_ROOT, "build", "Debug", "indexforge.dll"),
         os.path.join(REPO_ROOT, "indexforge.dll"),
-        # Linux
+        # Linux / Unix
         os.path.join(REPO_ROOT, "build", "libindexforge.so"),
         os.path.join(REPO_ROOT, "libindexforge.so"),
         # macOS
         os.path.join(REPO_ROOT, "build", "libindexforge.dylib"),
-        os.path.join(REPO_ROOT, "libindexforge.dylib"),
     ]
     for path in candidates:
         if os.path.isfile(path):
             return path
+    return None
+
+def find_java_binary():
+    """Locate Java 21 binary in tools/ or system PATH."""
+    local_jdk = os.path.join(REPO_ROOT, "tools", "jdk-21", "bin", "java.exe" if os.name == "nt" else "java")
+    if os.path.isfile(local_jdk):
+        return local_jdk
+    sys_java = shutil.which("java")
+    if sys_java:
+        return sys_java
+    return None
+
+def find_maven_binary():
+    """Locate Apache Maven binary in tools/ or system PATH."""
+    local_mvn = os.path.join(REPO_ROOT, "tools", "maven", "bin", "mvn.cmd" if os.name == "nt" else "mvn")
+    if os.path.isfile(local_mvn):
+        return local_mvn
+    sys_mvn = shutil.which("mvn.cmd" if os.name == "nt" else "mvn")
+    if sys_mvn:
+        return sys_mvn
     return None
 
 def build_engine():
@@ -62,7 +83,6 @@ def build_engine():
     
     print("[*] Compiling C++20 IndexForge engine via CMake...")
     build_dir = os.path.join(REPO_ROOT, "build")
-    
     cmd_config = [cmake_bin, "-B", build_dir, "-DCMAKE_BUILD_TYPE=Release"]
     if shutil.which("ninja"):
         cmd_config.extend(["-G", "Ninja"])
@@ -74,19 +94,6 @@ def build_engine():
     cmd_build = [cmake_bin, "--build", build_dir, "--config", "Release"]
     res = subprocess.run(cmd_build, cwd=REPO_ROOT)
     return res.returncode == 0
-
-def check_python_deps():
-    """Verify required Python packages."""
-    required = ["fastapi", "uvicorn", "pydantic"]
-    missing = []
-    for pkg in required:
-        try:
-            __import__(pkg)
-        except ImportError:
-            missing.append(pkg)
-    if missing:
-        print(f"[*] Installing missing Python packages: {missing}...")
-        subprocess.run([sys.executable, "-m", "pip", "install", *missing], check=True)
 
 def check_node_deps():
     """Verify frontend node_modules."""
@@ -101,7 +108,7 @@ def check_node_deps():
         return res.returncode == 0
     return True
 
-def wait_for_url(url, timeout=15):
+def wait_for_url(url, timeout=20):
     """Wait until an HTTP endpoint responds with 200 OK."""
     start = time.time()
     while time.time() - start < timeout:
@@ -113,21 +120,32 @@ def wait_for_url(url, timeout=15):
             time.sleep(0.3)
     return False
 
+def wait_for_socket(port, host="127.0.0.1", timeout=15):
+    """Wait until a TCP port accepts socket connections."""
+    start = time.time()
+    while time.time() - start < timeout:
+        if is_port_in_use(port, host):
+            return True
+        time.sleep(0.2)
+    return False
+
 def main():
-    parser = argparse.ArgumentParser(description="IndexForge Full-Stack Local Launcher")
-    parser.add_argument("--backend-only", action="store_true", help="Launch only FastAPI backend")
+    parser = argparse.ArgumentParser(description="IndexForge Hybrid Platform Local Launcher")
+    parser.add_argument("--grpc-port", type=int, default=50051, help="C++ Engine gRPC port (default: 50051)")
+    parser.add_argument("--backend-port", type=int, default=8080, help="Java Spring Boot API port (default: 8080)")
+    parser.add_argument("--frontend-port", type=int, default=5174, help="React + Vite port (default: 5174)")
+    parser.add_argument("--engine-only", action="store_true", help="Launch only C++ gRPC engine")
+    parser.add_argument("--backend-only", action="store_true", help="Launch only gRPC engine + Java Spring Boot")
     parser.add_argument("--frontend-only", action="store_true", help="Launch only React + Vite dev server")
-    parser.add_argument("--build-only", action="store_true", help="Build C++ library and frontend dist, then exit")
+    parser.add_argument("--build-only", action="store_true", help="Build all modules and exit")
     parser.add_argument("--no-browser", action="store_true", help="Do not automatically open default browser")
-    parser.add_argument("--backend-port", type=int, default=8000, help="Backend port (default: 8000)")
-    parser.add_argument("--frontend-port", type=int, default=5173, help="Frontend port (default: 5173)")
     args = parser.parse_args()
 
     os.chdir(REPO_ROOT)
 
-    print("=" * 68)
-    print("      IndexForge — High-Performance Full-Text Search Engine")
-    print("=" * 68)
+    print("=" * 72)
+    print("   IndexForge — Hybrid C++20 & Java 21 Enterprise Search Platform")
+    print("=" * 72)
 
     # 1. Verify/Build C++ Engine
     lib_path = find_engine_library()
@@ -140,55 +158,97 @@ def main():
 
     print(f"[✓] C++20 Core Library: {lib_path}")
 
-    # 2. Check Dependencies
-    check_python_deps()
+    # 2. Check Java 21
+    java_bin = find_java_binary()
+    if not java_bin:
+        print("[!] Java 21 not found. Please install Java 21 or extract OpenJDK to tools/jdk-21.")
+        sys.exit(1)
+    print(f"[✓] Java Runtime:       {java_bin}")
+
+    # Check Spring Boot Fat JAR
+    jar_path = os.path.join(JAVA_API_DIR, "target", "indexforge-java-api-1.0.0.jar")
+    if not os.path.isfile(jar_path):
+        print("[*] Spring Boot JAR not found. Packaging with Maven...")
+        mvn_bin = find_maven_binary()
+        mvn_settings = os.path.join(REPO_ROOT, "tools", "maven", "conf", "settings.xml")
+        cmd_mvn = [mvn_bin, "package", "-DskipTests"]
+        if os.path.isfile(mvn_settings):
+            cmd_mvn.extend(["-s", mvn_settings])
+        subprocess.run(cmd_mvn, cwd=JAVA_API_DIR, check=True)
 
     if args.build_only:
-        print("[*] Building frontend distribution assets...")
+        print("[*] Building frontend distribution...")
         npm_bin = shutil.which("npm.cmd" if os.name == "nt" else "npm")
         if npm_bin:
             check_node_deps()
             subprocess.run([npm_bin, "run", "build"], cwd=FRONTEND_DIR)
-        print("[✓] Build complete.")
+        print("[✓] All modules built successfully.")
         return
 
+    grpc_port = find_available_port(args.grpc_port)
     backend_port = find_available_port(args.backend_port)
-    if backend_port != args.backend_port:
-        print(f"[*] Port {args.backend_port} is in use by another app. Assigned backend to port {backend_port}.")
-
     frontend_port = find_available_port(args.frontend_port)
-    if frontend_port != args.frontend_port:
-        print(f"[*] Port {args.frontend_port} is in use by another app. Assigned frontend to port {frontend_port}.")
 
     processes = []
 
     def shutdown_all():
-        print("\n[*] Shutting down local services...")
+        print("\n[*] Shutting down IndexForge services...")
         for p in processes:
             try:
                 p.terminate()
-                p.wait(timeout=3)
+                p.wait(timeout=2)
             except Exception:
                 try:
                     p.kill()
                 except Exception:
                     pass
-        print("[✓] All services terminated.")
+        print("[✓] All services stopped.")
 
-    # 3. Start Backend (FastAPI)
+    # 3. Start C++ Search Engine gRPC Server
     if not args.frontend_only:
-        print(f"[*] Starting FastAPI Backend on http://127.0.0.1:{backend_port}...")
-        cmd_backend = [
-            sys.executable, "-m", "uvicorn",
-            "api.main:app",
-            "--host", "127.0.0.1",
-            "--port", str(backend_port),
-            "--log-level", "warning"
-        ]
-        p_back = subprocess.Popen(cmd_backend, cwd=REPO_ROOT, stdin=subprocess.PIPE)
-        processes.append(p_back)
+        print(f"[*] Starting C++ Search Engine gRPC Server on port {grpc_port}...")
+        server_py = os.path.join(GRPC_SERVER_DIR, "server.py")
+        cmd_grpc = [sys.executable, server_py, "--port", str(grpc_port)]
+        p_grpc = subprocess.Popen(cmd_grpc, cwd=REPO_ROOT, stdin=subprocess.PIPE)
+        processes.append(p_grpc)
 
-    # 4. Start Frontend (React + Vite)
+        if not wait_for_socket(grpc_port, timeout=8):
+            print(f"[!] Warning: C++ gRPC Server on port {grpc_port} taking longer to respond.")
+        else:
+            print(f"[✓] C++ gRPC Engine is listening on port {grpc_port}.")
+
+    if args.engine_only:
+        print(f"\n[*] C++ Engine running on port {grpc_port}. Press Ctrl+C to terminate.")
+        try:
+            while True:
+                time.sleep(1)
+        except KeyboardInterrupt:
+            shutdown_all()
+        return
+
+    # 4. Start Java 21 Spring Boot Application
+    if not args.frontend_only:
+        print(f"[*] Starting Java 21 Spring Boot Backend on http://127.0.0.1:{backend_port}...")
+        cmd_java = [
+            java_bin,
+            "-XX:+UseZGC",
+            "-XX:+ZGenerational",
+            "-Xms128m",
+            "-Xmx512m",
+            "-jar", jar_path,
+            f"--server.port={backend_port}",
+            f"--indexforge.grpc.port={grpc_port}",
+        ]
+        p_java = subprocess.Popen(cmd_java, cwd=REPO_ROOT, stdin=subprocess.PIPE)
+        processes.append(p_java)
+
+        health_url = f"http://127.0.0.1:{backend_port}/api/index/health"
+        if wait_for_url(health_url, timeout=25):
+            print(f"[✓] Spring Boot Backend initialized successfully on port {backend_port}.")
+        else:
+            print(f"[*] Backend starting up on port {backend_port}...")
+
+    # 5. Start React + Vite Dev Server
     if not args.backend_only:
         check_node_deps()
         npm_bin = shutil.which("npm.cmd" if os.name == "nt" else "npm")
@@ -203,21 +263,22 @@ def main():
             p_front = subprocess.Popen(cmd_frontend, cwd=FRONTEND_DIR, shell=(os.name == 'nt'), env=env, stdin=subprocess.PIPE)
             processes.append(p_front)
 
-    # 5. Health Check & Browser Launch
     target_url = f"http://localhost:{frontend_port}" if not args.backend_only else f"http://127.0.0.1:{backend_port}"
-    health_url = f"http://127.0.0.1:{backend_port}/api/health" if not args.frontend_only else target_url
 
-    print("\n" + "=" * 68)
+    print("\n" + "=" * 72)
+    print("                 IndexForge Services Are Running")
+    print("=" * 72)
     if not args.frontend_only:
-        print(f"  Backend API:         http://127.0.0.1:{backend_port}")
-        print(f"  API Documentation:   http://127.0.0.1:{backend_port}/docs")
+        print(f"  ⚡ C++ gRPC Engine Core:    127.0.0.1:{grpc_port}")
+        print(f"  ☕ Spring Boot 3 REST API:   http://127.0.0.1:{backend_port}")
+        print(f"  📖 Swagger / OpenAPI Docs:  http://127.0.0.1:{backend_port}/swagger-ui/index.html")
     if not args.backend_only:
-        print(f"  Frontend UI (Vite):  http://localhost:{frontend_port}")
-    print("=" * 68 + "\n")
+        print(f"  💻 React 18 Web Interface:  http://localhost:{frontend_port}")
+    print("=" * 72 + "\n")
 
-    if not args.no_browser:
+    if not args.no_browser and not args.backend_only:
         def open_browser():
-            if wait_for_url(target_url, timeout=12):
+            if wait_for_url(target_url, timeout=15):
                 print(f"[+] Opening local interface in browser: {target_url}\n")
                 webbrowser.open(target_url)
         threading.Thread(target=open_browser, daemon=True).start()
@@ -228,7 +289,7 @@ def main():
         while True:
             for p in processes:
                 if p.poll() is not None:
-                    print(f"[!] Process {p.args} exited unexpectedly.")
+                    print(f"[!] A service exited unexpectedly (code {p.returncode}).")
                     shutdown_all()
                     sys.exit(1)
             time.sleep(0.5)

@@ -48,4 +48,20 @@ Thumbs.db
 *.tmp
 *.log
 
+# Java & Maven
+target/
+java-api/target/
+*.jar
+*.class
+.m2/
+
+# Local tools & SDKs
+tools/
+
+# Storage DB files
+storage/*.db
+storage/*.db-wal
+storage/*.db-shm
+
+
 .vercel

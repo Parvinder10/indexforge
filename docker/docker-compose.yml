@@ -1,0 +1,60 @@
+version: '3.8'
+
+services:
+  cpp-engine:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.cpp-engine
+    container_name: indexforge-cpp-engine
+    ports:
+      - "50051:50051"
+    volumes:
+      - ../storage:/app/storage
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "test_client.py"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - indexforge-net
+
+  java-api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.java-api
+    container_name: indexforge-java-api
+    ports:
+      - "8080:8080"
+    environment:
+      - SERVER_PORT=8080
+      - INDEXFORGE_GRPC_HOST=cpp-engine
+      - INDEXFORGE_GRPC_PORT=50051
+      - INDEXFORGE_STORAGE_DATABASE_PATH=/app/storage/metadata.db
+      - INDEXFORGE_STORAGE_DOCUMENTS_DIR=/app/storage/documents
+    volumes:
+      - ../storage:/app/storage
+    depends_on:
+      cpp-engine:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - indexforge-net
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.frontend
+    container_name: indexforge-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - java-api
+    restart: unless-stopped
+    networks:
+      - indexforge-net
+
+networks:
+  indexforge-net:
+    driver: bridge

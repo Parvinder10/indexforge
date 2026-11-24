@@ -1,0 +1,190 @@
+syntax = "proto3";
+
+package indexforge.search;
+
+option java_multiple_files = true;
+option java_package = "com.indexforge.grpc";
+option java_outer_classname = "SearchServiceProto";
+
+// =========================================================================
+// Enumerations
+// =========================================================================
+
+enum RankingAlgorithm {
+  BM25 = 0;
+  TF_IDF = 1;
+  LINEAR_SCAN = 2;
+}
+
+// =========================================================================
+// Document Indexing Messages
+// =========================================================================
+
+message IndexDocumentRequest {
+  uint32 doc_id = 1;
+  string title = 2;
+  string source = 3;
+  string date = 4;
+  string doc_type = 5;
+  string content = 6;
+  string file_name = 7;
+}
+
+message IndexDocumentResponse {
+  bool success = 1;
+  uint32 doc_id = 2;
+  uint32 tokens_indexed = 3;
+  string error_message = 4;
+}
+
+message IndexBatchRequest {
+  repeated IndexDocumentRequest documents = 1;
+}
+
+message IndexBatchResponse {
+  bool success = 1;
+  uint32 indexed_count = 2;
+  repeated IndexDocumentResponse results = 3;
+  string error_message = 4;
+}
+
+message DeleteDocumentRequest {
+  uint32 doc_id = 1;
+}
+
+message DeleteDocumentResponse {
+  bool success = 1;
+  uint32 doc_id = 2;
+  string error_message = 3;
+}
+
+// =========================================================================
+// Search Retrieval Messages
+// =========================================================================
+
+message SearchRequest {
+  string query = 1;
+  RankingAlgorithm algorithm = 2;
+  float k1 = 3;             // BM25 term saturation (default: 1.2)
+  float b = 4;              // BM25 length normalization (default: 0.75)
+  uint32 limit = 5;         // Max results requested
+  uint32 offset = 6;        // Pagination offset
+  string doc_type = 7;      // Optional filter (e.g. "tender", "policy")
+}
+
+message SearchHit {
+  uint32 doc_id = 1;
+  string title = 2;
+  string source = 3;
+  string date = 4;
+  string doc_type = 5;
+  double score = 6;
+  uint32 length = 7;
+  string snippet = 8;
+  repeated string matched_terms = 9;
+}
+
+message SearchResponse {
+  string query = 1;
+  string algorithm = 2;
+  uint32 total_hits = 3;
+  double engine_latency_ms = 4;
+  bool from_cache = 5;
+  repeated SearchHit hits = 6;
+  string error_message = 7;
+}
+
+// =========================================================================
+// Engine Statistics & Health Messages
+// =========================================================================
+
+message StatsRequest {}
+
+message StatsResponse {
+  uint32 total_documents = 1;
+  uint32 active_documents = 2;
+  uint32 deleted_documents = 3;
+  uint32 total_unique_terms = 4;
+  uint32 total_postings = 5;
+  uint32 total_token_occurrences = 6;
+  double avg_doc_length = 7;
+  uint64 estimated_memory_bytes = 8;
+  uint32 cache_entries = 9;
+  uint32 cache_hits = 10;
+  uint32 cache_misses = 11;
+  string engine_version = 12;
+}
+
+message HealthRequest {}
+
+message HealthResponse {
+  string status = 1;         // "SERVING", "NOT_SERVING"
+  string engine_info = 2;
+  uint64 uptime_seconds = 3;
+}
+
+// =========================================================================
+// Index Persistence & Maintenance Messages
+// =========================================================================
+
+message SaveIndexRequest {
+  string filepath = 1;
+}
+
+message SaveIndexResponse {
+  bool success = 1;
+  string filepath = 2;
+  string error_message = 3;
+}
+
+message LoadIndexRequest {
+  string filepath = 1;
+}
+
+message LoadIndexResponse {
+  bool success = 1;
+  string filepath = 2;
+  uint32 documents_loaded = 3;
+  string error_message = 4;
+}
+
+message VerifyIntegrityRequest {
+  string filepath = 1;
+}
+
+message VerifyIntegrityResponse {
+  bool valid = 1;
+  string checksum = 2;
+  uint64 bytes_checked = 3;
+  string error_message = 4;
+}
+
+message ClearCacheRequest {}
+
+message ClearCacheResponse {
+  bool success = 1;
+}
+
+// =========================================================================
+// gRPC Search Engine Service
+// =========================================================================
+
+service SearchEngineService {
+  // Indexing operations
+  rpc IndexDocument(IndexDocumentRequest) returns (IndexDocumentResponse);
+  rpc IndexBatch(IndexBatchRequest) returns (IndexBatchResponse);
+  rpc DeleteDocument(DeleteDocumentRequest) returns (DeleteDocumentResponse);
+
+  // Search & Retrieval operations
+  rpc Search(SearchRequest) returns (SearchResponse);
+
+  // Health and Telemetry operations
+  rpc CheckHealth(HealthRequest) returns (HealthResponse);
+  rpc GetStats(StatsRequest) returns (StatsResponse);
+
+  // Maintenance and Persistence operations
+  rpc SaveIndex(SaveIndexRequest) returns (SaveIndexResponse);
+  rpc LoadIndex(LoadIndexRequest) returns (LoadIndexResponse);
+  rpc VerifyIntegrity(VerifyIntegrityRequest) returns (VerifyIntegrityResponse);
+  rpc ClearCache(ClearCacheRequest) returns (ClearCacheResponse);
+}

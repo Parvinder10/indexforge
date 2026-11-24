@@ -1,13 +1,17 @@
 export interface SearchHit {
   doc_id: number;
+  docId?: number;
   score: number;
   title: string;
   source: string;
   date: string;
   doc_type: string;
+  docType?: string;
   snippet: string;
   doc_length: number;
+  length?: number;
   matched_terms: string[];
+  matchedTerms?: string[];
 }
 
 export interface SearchResponse {
@@ -16,9 +20,13 @@ export interface SearchResponse {
   k1?: number;
   b?: number;
   total_hits: number;
+  totalHits?: number;
   engine_latency_ms: number;
+  engineLatencyMs?: number;
   total_latency_ms: number;
+  totalLatencyMs?: number;
   from_cache: boolean;
+  fromCache?: boolean;
   hits: SearchHit[];
 }
 
@@ -69,4 +77,13 @@ export interface BenchmarkResult {
   tfidf: BenchmarkMetrics;
   speedup: number;
   concurrent_qps: number;
+}
+
+export interface SearchHistoryItem {
+  id: number;
+  query: string;
+  algorithm: string;
+  totalHits: number;
+  latencyMs: number;
+  searchedAt: string;
 }

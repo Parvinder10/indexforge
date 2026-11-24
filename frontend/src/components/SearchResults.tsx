@@ -98,16 +98,16 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
                 {/* Metadata Row */}
                 <div className="flex flex-wrap items-center gap-2 text-xs text-slate-400">
                   <span className={`px-2 py-0.5 rounded-md border font-medium uppercase tracking-wider text-[10px] ${typeStyle.bg} ${typeStyle.text} ${typeStyle.border}`}>
-                    {hit.doc_type.replace('_', ' ')}
+                    {(hit.doc_type || hit.docType || 'policy').replace('_', ' ')}
                   </span>
                   <span>•</span>
                   <span>{hit.source}</span>
                   <span>•</span>
                   <span>{hit.date}</span>
-                  {hit.doc_length > 0 && (
+                  {((hit.doc_length || hit.length || 0) > 0) && (
                     <>
                       <span>•</span>
-                      <span>{hit.doc_length} tokens</span>
+                      <span>{hit.doc_length || hit.length} tokens</span>
                     </>
                   )}
                 </div>
@@ -139,7 +139,7 @@ export const SearchResults: React.FC<SearchResultsProps> = ({
             <div className="mt-4 pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs">
               <div className="flex flex-wrap items-center gap-1.5">
                 <span className="text-slate-500 text-[11px]">Matched terms:</span>
-                {hit.matched_terms.map((term, tIdx) => (
+                {(hit.matched_terms || hit.matchedTerms || []).map((term, tIdx) => (
                   <span
                     key={tIdx}
                     className="px-2 py-0.5 rounded bg-slate-800/80 text-blue-300 border border-slate-700/50 font-mono text-[11px]"

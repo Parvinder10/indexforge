@@ -5,6 +5,7 @@ import { DocumentViewerModal } from './components/DocumentViewerModal';
 import { IndexStatsModal } from './components/IndexStatsModal';
 import { IngestionModal } from './components/IngestionModal';
 import { BenchmarkDashboard } from './components/BenchmarkDashboard';
+import { SearchHistoryModal } from './components/SearchHistoryModal';
 import { search, searchLinear, getStats } from './api';
 import { SearchHit, IndexStats } from './types';
 
@@ -27,6 +28,7 @@ export const App: React.FC = () => {
   const [showStatsModal, setShowStatsModal] = useState(false);
   const [showIngestionModal, setShowIngestionModal] = useState(false);
   const [showBenchmarkModal, setShowBenchmarkModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
 
   const fetchStats = useCallback(async () => {
     try {
@@ -117,11 +119,11 @@ export const App: React.FC = () => {
                   IndexForge
                 </h1>
                 <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/30">
-                  C++20 Core
+                  C++20 + Java 21
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 hidden sm:block">
-                High-Performance Inverted Index & Ranking Engine
+                Hybrid Architecture • C++ Inverted Index • Spring Boot Orchestration • gRPC
               </p>
             </div>
           </div>
@@ -133,6 +135,14 @@ export const App: React.FC = () => {
               className="px-3.5 py-2 rounded-xl bg-purple-600/10 hover:bg-purple-600/20 text-purple-300 border border-purple-500/30 transition-all flex items-center gap-1.5 shadow-sm"
             >
               <span>⚡ Benchmarks</span>
+            </button>
+
+            <button
+              onClick={() => setShowHistoryModal(true)}
+              className="px-3.5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 transition-all flex items-center gap-1.5 shadow-sm"
+              title="Search History Audit Log"
+            >
+              <span>📜 History</span>
             </button>
 
             <button
@@ -197,14 +207,16 @@ export const App: React.FC = () => {
       <footer className="mt-auto border-t border-slate-800/80 bg-slate-950/60 py-6 text-center text-xs text-slate-500">
         <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div>
-            IndexForge Search Core • C++20 Inverted Index • Okapi BM25 & TF-IDF • Delta-VByte Compression
+            IndexForge Search Platform • C++20 Core • Okapi BM25 & TF-IDF • Delta-VByte Compression
           </div>
           <div className="flex items-center gap-4 text-slate-400 font-mono text-[11px]">
-            <span>FastAPI REST Layer</span>
+            <span>Java 21 Spring Boot</span>
+            <span>•</span>
+            <span>gRPC / Protobuf</span>
             <span>•</span>
             <span>SQLite Metadata</span>
             <span>•</span>
-            <span>React + TypeScript UI</span>
+            <span>React + TypeScript</span>
           </div>
         </div>
       </footer>
@@ -221,6 +233,15 @@ export const App: React.FC = () => {
         onClose={() => setShowStatsModal(false)}
         stats={stats}
         onRefresh={fetchStats}
+      />
+
+      <SearchHistoryModal
+        isOpen={showHistoryModal}
+        onClose={() => setShowHistoryModal(false)}
+        onSelectQuery={(q) => {
+          setQuery(q);
+          handleSearch(q);
+        }}
       />
 
       <IngestionModal

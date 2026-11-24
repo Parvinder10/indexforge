@@ -1,0 +1,18 @@
+SECURITIES AND EXCHANGE COMMISSION (SEC)
+PUBLIC REGULATORY NOTICE & COMPLIANCE BULLETIN
+Notice No: SEC-2026-REG-7701
+Date: 2026-09-18
+Subject: Automated Market Making, Ultra Low-Latency Algorithmic Execution, and Systemic Risk Controls
+
+1. PURPOSE AND APPLICABILITY
+The Securities and Exchange Commission hereby adopts amended rules under Regulation SCI and the Securities Exchange Act of 1934 governing proprietary algorithmic trading firms, high-frequency liquidity providers, and alternative trading systems (ATS).
+
+2. MANDATED RISK CONTROLS AND ARCHITECTURAL THRESHOLDS
+Registered broker-dealers and electronic exchange participants utilizing automated trading algorithms must implement pre-trade risk controls:
+- Real-Time Price Banding and Order Size Limits: Hard system barriers preventing errant market order dispatch, runaway algorithm execution, and accidental cascade events.
+- Latency Floor and Fair Order Queue Processing: Exchange matching engines must enforce deterministic message processing queues to prevent predatory colocation advantages.
+- Automated Kill Switches: Independent, out-of-band circuit breakers capable of immediate algorithm termination within 5 milliseconds of risk parameter breaches.
+- Comprehensive Audit Trail Logging: Complete microsecond-level synchronization of all order submissions, cancellations, fills, and internal state transitions with PTP time-stamping (IEEE 1588).
+
+3. NON-COMPLIANCE SANCTIONS
+Failure to maintain functional circuit breakers or maintain audit logs will subject market participants to immediate suspension of trading privileges and administrative civil monetary penalties.

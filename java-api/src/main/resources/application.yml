@@ -1,0 +1,30 @@
+server:
+  port: ${SERVER_PORT:8080}
+
+spring:
+  application:
+    name: indexforge-java-api
+
+indexforge:
+  grpc:
+    host: ${GRPC_HOST:localhost}
+    port: ${GRPC_PORT:50051}
+    timeout-seconds: ${GRPC_TIMEOUT:5}
+    max-retry-attempts: 3
+  storage:
+    database-path: ${SQLITE_DB:../storage/metadata.db}
+    sample-docs-dir: ${SAMPLE_DOCS_DIR:../storage/sample_docs}
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+
+logging:
+  level:
+    root: INFO
+    com.indexforge: INFO
+    org.springframework.web: INFO

@@ -1,0 +1,68 @@
+# =======================================================
+# Stage 1: C++20 Core Compilation
+# =======================================================
+FROM ubuntu:24.04 AS builder
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    ninja-build \
+    clang \
+    libc++-dev \
+    libc++abi-dev \
+    ca-certificates \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY cpp-search-engine/CMakeLists.txt ./
+COPY cpp-search-engine/include/ ./include/
+COPY cpp-search-engine/src/ ./src/
+COPY tests/ ./tests/
+COPY benchmarks/ ./benchmarks/
+
+# Build shared library (.so), CLI, and tests
+RUN cmake -B build -G Ninja \
+    -DCMAKE_CXX_COMPILER=clang++ \
+    -DCMAKE_C_COMPILER=clang \
+    -DCMAKE_BUILD_TYPE=Release \
+ && cmake --build build
+
+# Verify test integrity
+RUN ./build/indexforge_tests
+
+# =======================================================
+# Stage 2: gRPC Server Runtime (Python C ABI Bridge)
+# =======================================================
+FROM python:3.11-slim AS runtime
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libstdc++6 \
+ && rm -rf /var/lib/apt/lists/*
+
+# Install gRPC and Protobuf
+RUN pip install --no-cache-dir grpcio==1.68.1 protobuf==5.28.3
+
+# Copy compiled shared library and tools
+COPY --from=builder /app/build/indexforge.so /app/build/indexforge.so
+COPY --from=builder /app/build/indexforge_cli /app/build/indexforge_cli
+
+# Copy C++ engine gRPC server and proto definitions
+COPY cpp-search-engine/grpc_server/ /app/cpp-search-engine/grpc_server/
+COPY proto/ /app/proto/
+COPY storage/ /app/storage/
+
+WORKDIR /app/cpp-search-engine/grpc_server
+
+EXPOSE 50051
+
+HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=3 \
+    CMD python test_client.py || exit 1
+
+ENTRYPOINT ["python", "server.py", "--port", "50051"]
